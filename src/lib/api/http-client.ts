@@ -95,13 +95,16 @@ function safeJsonParse(raw: string): unknown {
 function normalizeError(status: number, payload: unknown): ApiErrorShape {
   if (payload !== null && typeof payload === "object") {
     const record = payload as Record<string, unknown>;
+    // O backend responde erros como Problem Details (RFC 7807): detail/title/code.
+    const message =
+      pickString(record.detail) ??
+      pickString(record.message) ??
+      pickString(record.title) ??
+      `Falha na requisicao (${status})`;
     return {
       status,
-      code: typeof record.code === "string" ? record.code : `http_${status}`,
-      message:
-        typeof record.message === "string"
-          ? record.message
-          : `Falha na requisicao (${status})`,
+      code: pickString(record.code) ?? `http_${status}`,
+      message,
       details: record,
     };
   }
@@ -110,4 +113,8 @@ function normalizeError(status: number, payload: unknown): ApiErrorShape {
     code: `http_${status}`,
     message: `Falha na requisicao (${status})`,
   };
+}
+
+function pickString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }

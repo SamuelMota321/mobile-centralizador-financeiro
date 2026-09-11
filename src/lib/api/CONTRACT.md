@@ -4,32 +4,37 @@ O contrato e propriedade do backend (`backend-centralizador-financeiro`), servid
 `GET /api/v1/openapi.json` e `GET /api/v1/docs`, e versionado em `openapi/openapi.json`
 naquele repositorio.
 
-## Estado atual (bloqueio de S1-03)
+`openapi.snapshot.json` (nesta pasta) e uma copia de referencia do contrato
+em `backend @ 17ca76d`. Os tipos em `src/lib/accounts/types.ts` e os schemas em
+`src/lib/accounts/schema.ts` sao transcritos a mao e devem acompanhar esse snapshot.
+Este cliente nao compartilha fonte nem pacote com o cliente web.
 
-O contrato publicado hoje expoe **apenas** `/api/v1/health/live` e `/api/v1/health/ready`
-e nao tem schemas em `components`. Nao ha endpoints nem modelos de `users`, `tenants`
-ou `accounts`.
+## Cobertura atual
 
-Por isso, nesta fase:
+| Rota | Auth | Cliente |
+|---|---|---|
+| `GET /api/v1/health/live` `/ready` | publico | — |
+| `POST /api/v1/accounts` | Bearer JWT (access token Auth0) | `createAccount()` |
+| `GET /api/v1/accounts` | Bearer JWT (access token Auth0) | `listAccounts()` |
 
-- `src/lib/accounts/types.ts` e `src/lib/accounts/schema.ts` sao **provisorios**,
-  alinhados ao Modelo de Dados Identity e Accounts 1.0 e ao schema inbound do backend.
-- Nenhum cliente tipado foi gerado.
-- Testes de contrato (Dev 3) dependem do contrato completo.
+Erros seguem Problem Details (RFC 7807) — ver `src/lib/api/errors.ts`.
+Codigo `POSSIBLE_CONNECTED_ACCOUNT_DUPLICATE` (409) traz `candidates` e e mapeado
+para `PossibleDuplicateAccountError`.
 
-Desbloqueio: fase 3 do Dev 1 (S1-05) publica `/api/v1/accounts` e os schemas no OpenAPI.
+## Limitacoes do contrato
+
+- `components.schemas` esta vazio: os schemas de request/response estao inline em
+  cada rota. Por isso os tipos sao mantidos a mao em vez de gerados.
+- `servers` esta vazio: a base URL vem do ambiente (`EXPO_PUBLIC_API_BASE_URL`).
 
 ## Geracao do cliente tipado — decisao pendente
 
 Nenhuma biblioteca geradora esta aprovada (arquitetura, "Visao da API e validacao").
-Este cliente nao compartilha fonte nem pacote com o cliente web: quando o contrato
-estiver completo, a geracao roda de forma independente aqui.
+Enquanto nao houver decisao, o acesso usa `src/lib/api/http-client.ts` + tipos a mao.
 
 | Opcao | Gera | Observacao |
 |---|---|---|
-| `openapi-typescript` | apenas tipos (`.d.ts`) + `openapi-fetch` runtime | leve; combina com o wrapper atual |
-| `@hey-api/openapi-ts` | tipos + SDK de funcoes | ativo, plugin de zod opcional |
-| `orval` | hooks + zod | mais opinativo |
+| `openapi-typescript` | tipos (`.d.ts`) + `openapi-fetch` | leve; schemas inline geram tipos verbosos porem corretos |
+| `@hey-api/openapi-ts` | tipos + SDK de funcoes | plugin de zod opcional |
+| `orval` | hooks + zod | util se adotarmos react-query |
 | `openapi-generator` (typescript-fetch) | cliente completo | JVM; mais pesado |
-
-Ate a decisao, o acesso a API usa `src/lib/api/http-client.ts` com tipos escritos a mao.
