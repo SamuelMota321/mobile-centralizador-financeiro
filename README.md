@@ -4,8 +4,9 @@ Cliente mobile (React Native + Expo, TypeScript) do MVP acadêmico. Aplicação 
 da web: não compartilha componentes, navegação nem código-fonte. Consome o contrato
 OpenAPI do backend sob `/api/v1`.
 
-Esta fase (S1-04 + S1-05) cobre login Auth0, área protegida, logout e as telas de criar
-e listar contas.
+A Sprint 1 (S1-04 a S1-07) cobre login Auth0, área protegida, logout e a manutenção de
+contas manuais: criar, listar, editar e desativar (com confirmação), além do isolamento de
+dados entre sessões.
 
 O login usa Authorization Code com PKCE (aplicação Auth0 do tipo **Native**, sem client
 secret) e o token fica no Keychain/Keystore via `expo-secure-store`.
@@ -100,6 +101,10 @@ EXPO_PUBLIC_AUTH0_AUDIENCE=...   # idêntico ao AUTH0_AUDIENCE do backend
 `EXPO_PUBLIC_AUTH0_AUDIENCE` precisa ser exatamente o mesmo do backend — se divergir, o
 backend recusa o token com 401.
 
+A aplicação Native precisa estar **no mesmo tenant Auth0 do backend**: `EXPO_PUBLIC_AUTH0_DOMAIN`
+deve ser o host de `AUTH0_ISSUER_BASE_URL` do backend. Um tenant diferente emite tokens com
+outro `issuer`, e o backend os recusa com 401 mesmo com audience correta.
+
 ### 5. Iniciar o Metro (servidor de desenvolvimento do Expo)
 
 ```bash
@@ -149,15 +154,34 @@ Parar o Metro: `Ctrl+C`.
 
 1. O app abre na tela **Entrar**.
 2. Tocar em **Entrar** abre o Auth0 no navegador do sistema e volta ao app autenticado.
-3. A lista de contas aparece (vazia no primeiro acesso) e **Criar conta** funciona.
+3. A lista de contas aparece (vazia no primeiro acesso); **Criar conta**, **Editar** e
+   **Desativar** funcionam.
 4. **Sair** limpa a sessão e volta à tela de entrada.
 
 ## Checagens de qualidade
 
 ```bash
 pnpm typecheck     # tsc --noEmit
+pnpm test          # Vitest
 npx expo-doctor    # 21 verificações de compatibilidade do SDK
 ```
+
+### Testes automatizados
+
+Vitest em ambiente Node: `fetch` e `expo-secure-store` são simulados, sem aparelho nem
+credenciais. Os arquivos `*.test.ts` ficam ao lado do código testado.
+
+| Arquivo | O que garante |
+|---|---|
+| `src/lib/accounts/patch.test.ts` | PATCH só com campos alterados; saldo e data sempre juntos; comparação de valores sem `Number` |
+| `src/lib/accounts/schema.test.ts` | validação de borda da criação e da edição espelhando o contrato |
+| `src/lib/accounts/messages.test.ts` | mensagens em pt-BR por código; 404 e conta arquivada indistinguíveis; 401 com ou sem Problem Details encerra a sessão |
+| `src/lib/accounts/api.test.ts` | bearer do provedor ativo e ausente após logout; rotas e corpo de update/deactivate |
+| `src/auth/session-store.test.ts` | sessão salva e lida do SecureStore; conteúdo corrompido é apagado; expiração no limite exato |
+| `src/lib/api/contract.test.ts` | operações de contas do cliente existem no `openapi.snapshot.json` com os mesmos campos |
+
+Telas e o fluxo real do Auth0 não têm teste automatizado (exigiriam biblioteca de teste de
+componentes ainda não decidida); são verificados pelo roteiro de demonstração abaixo.
 
 ## Solução de problemas
 
@@ -169,6 +193,8 @@ npx expo-doctor    # 21 verificações de compatibilidade do SDK
 | QR code não conecta (WSL / redes diferentes) | Metro no IP da VM | `pnpm start --tunnel` |
 | `10.0.2.2` não responde | backend não está no ar | passo 3 |
 | mudou o `.env` e não surtiu efeito | Metro faz cache de env | reinicie com `pnpm start -c` |
+| login conclui mas a lista dá erro 401 | app Native em outro tenant Auth0 ou audience diferente | confira o passo 4.1: mesmo tenant e audience do backend |
+| `Cannot connect to the Docker daemon` no WSL | integração do Docker Desktop com a distro desligada ou travada | Docker Desktop → Settings → Resources → WSL Integration: ative a distro. Se persistir: feche o Docker Desktop, rode `wsl --shutdown` no PowerShell e abra o Docker Desktop de novo |
 
 ## Estrutura relevante
 
@@ -176,12 +202,31 @@ npx expo-doctor    # 21 verificações de compatibilidade do SDK
 |---|---|
 | `App.tsx` | raiz: alterna entre área pública e protegida pelo estado de autenticação |
 | `src/auth/` | configuração Auth0, sessão no SecureStore e o contexto de autenticação |
-| `src/screens/` | telas de entrada, listagem e criação de conta |
+| `src/screens/` | telas de entrada, listagem (editar/desativar com confirmação) e formulário de conta |
 | `src/theme.ts` | paleta Coinciente |
 | `src/lib/api/config.ts` | base URL da API a partir do ambiente |
 | `src/lib/api/http-client.ts` | wrapper `fetch` (JSON, injeção de token, erros normalizados) |
 | `src/lib/api/CONTRACT.md` | estado do contrato OpenAPI e opções de gerador |
-| `src/lib/accounts/` | tipos e Zod de borda para contas |
+| `src/lib/accounts/` | tipos, Zod de borda, funções da API, diff do PATCH e mensagens por código |
+| `vitest.config.mts` | configuração dos testes (variáveis fictícias) |
+
+## Demonstração da Sprint 1
+
+Roteiro da parte mobile para a demonstração acadêmica. Use somente dados fictícios e dois
+usuários de teste (A e B) do mesmo tenant Auth0 do backend. Não mostre `.env` nem tokens.
+
+| # | Ação | Resultado esperado |
+|---|---|---|
+| 1 | Abrir o app | tela **Entrar** |
+| 2 | Entrar como A | Auth0 no navegador do sistema e retorno à lista (vazia com orientação) |
+| 3 | **Criar conta** duas vezes | contas na lista e aviso "Conta criada." |
+| 4 | Criar conta com saldo `abc` | erro abaixo do campo, nada é criado |
+| 5 | **Editar** uma conta, mudar o nome | volta à lista com "Conta atualizada." |
+| 6 | **Editar** e salvar sem mudar nada | "Nenhuma alteracao para salvar." |
+| 7 | **Desativar** → **Cancelar** no alerta | nada muda |
+| 8 | **Desativar** → **Desativar** no alerta | conta some com aviso de desativação |
+| 9 | Desativar uma conta pelo web e editá-la no app | "Esta conta nao foi encontrada ou nao esta mais disponivel." e lista recarregada |
+| 10 | **Sair** e entrar como B | nenhuma conta de A aparece |
 
 ## Ambiente
 
