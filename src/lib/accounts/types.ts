@@ -1,5 +1,5 @@
-// Alinhado ao contrato OpenAPI do backend em POST/GET /api/v1/accounts (@ backend 17ca76d).
-// O contrato descreve os schemas inline em cada rota (components.schemas vazio), entao
+// Alinhado ao contrato OpenAPI do backend em /api/v1/accounts (@ backend fa9b62a).
+// As rotas de contas descrevem seus schemas inline (fora de components.schemas), entao
 // os tipos abaixo sao transcritos a mao e devem acompanhar openapi.snapshot.json.
 // Sem pacote compartilhado: web e mobile mantem copias independentes.
 
@@ -30,7 +30,19 @@ export interface ManualAccountInput {
   confirmPossibleDuplicate?: boolean;
 }
 
-/** Conta retornada por POST (201) e por GET (itens). */
+/** Corpo de PATCH /api/v1/accounts/{accountId}: parcial, ao menos um campo de negocio. */
+export interface AccountUpdateInput {
+  name?: string;
+  type?: AccountType;
+  /** null remove a instituicao; omitido mantem o valor atual. */
+  institutionName?: string | null;
+  /** Enviado sempre junto com `initialBalanceAsOf`. */
+  initialBalance?: string;
+  initialBalanceAsOf?: string;
+  confirmPossibleDuplicate?: boolean;
+}
+
+/** Conta retornada por POST (201), GET (itens), PATCH e deactivate (200). */
 export interface Account {
   id: string;
   name: string;

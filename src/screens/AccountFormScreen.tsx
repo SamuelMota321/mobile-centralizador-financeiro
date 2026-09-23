@@ -9,35 +9,59 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../auth/AuthContext";
-import { createAccount, PossibleDuplicateAccountError } from "../lib/accounts/api";
+import {
+  createAccount,
+  PossibleDuplicateAccountError,
+  updateAccount,
+} from "../lib/accounts/api";
+import {
+  ACCOUNT_UNAVAILABLE_MESSAGE,
+  accountErrorMessage,
+  fieldErrorsFromProblem,
+  isAccountUnavailable,
+  isUnauthorized,
+} from "../lib/accounts/messages";
+import { buildAccountPatch } from "../lib/accounts/patch";
 import { manualAccountInputSchema } from "../lib/accounts/schema";
-import { ProblemDetailsError, PROBLEM_CODES } from "../lib/api/errors";
-import { ACCOUNT_TYPES, type AccountType, type DuplicateCandidate } from "../lib/accounts/types";
+import {
+  ACCOUNT_TYPES,
+  type Account,
+  type AccountType,
+  type DuplicateCandidate,
+} from "../lib/accounts/types";
 import { theme } from "../theme";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 
 interface Props {
+  /** Presente: edita esta conta manual. Ausente: cria uma conta nova. */
+  account?: Account;
   onCancel: () => void;
-  onCreated: () => void;
+  /** Volta para a lista, que recarrega e exibe a mensagem. */
+  onDone: (message: string) => void;
 }
 
-export function AccountFormScreen({ onCancel, onCreated }: Props) {
+export function AccountFormScreen({ account, onCancel, onDone }: Props) {
   const { handleUnauthorized } = useAuth();
+  const editing = account !== undefined;
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState<AccountType>("checking");
-  const [institutionName, setInstitutionName] = useState("");
-  const [initialBalance, setInitialBalance] = useState("");
-  const [initialBalanceAsOf, setInitialBalanceAsOf] = useState("");
+  const [name, setName] = useState(account?.name ?? "");
+  const [type, setType] = useState<AccountType>(account?.type ?? "checking");
+  const [institutionName, setInstitutionName] = useState(account?.institutionName ?? "");
+  const [initialBalance, setInitialBalance] = useState(account?.initialBalance ?? "");
+  const [initialBalanceAsOf, setInitialBalanceAsOf] = useState(
+    account?.initialBalanceAsOf ?? "",
+  );
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(confirmPossibleDuplicate: boolean) {
     setSubmitting(true);
     setFormError(null);
+    setInfo(null);
     setFieldErrors({});
 
     const parsed = manualAccountInputSchema.safeParse({
@@ -60,21 +84,38 @@ export function AccountFormScreen({ onCancel, onCreated }: Props) {
       return;
     }
 
+    const fallback = editing
+      ? "Nao foi possivel salvar a conta."
+      : "Nao foi possivel criar a conta.";
+
     try {
-      await createAccount(parsed.data);
-      onCreated();
+      if (account) {
+        const patch = buildAccountPatch(account, parsed.data);
+        if (!patch) {
+          setInfo("Nenhuma alteracao para salvar.");
+          return;
+        }
+        if (confirmPossibleDuplicate) patch.confirmPossibleDuplicate = true;
+        await updateAccount(account.id, patch);
+        onDone("Conta atualizada.");
+      } else {
+        await createAccount(parsed.data);
+        onDone("Conta criada.");
+      }
     } catch (error) {
       if (error instanceof PossibleDuplicateAccountError) {
         setDuplicates(error.candidates);
-      } else if (
-        error instanceof ProblemDetailsError &&
-        error.code === PROBLEM_CODES.authenticationRequired
-      ) {
+      } else if (isUnauthorized(error)) {
         await handleUnauthorized();
-      } else if (error instanceof ProblemDetailsError) {
-        setFormError(error.message);
+      } else if (isAccountUnavailable(error)) {
+        onDone(ACCOUNT_UNAVAILABLE_MESSAGE);
       } else {
-        setFormError("Nao foi possivel criar a conta.");
+        const serverFieldErrors = fieldErrorsFromProblem(error);
+        if (Object.keys(serverFieldErrors).length > 0) {
+          setFieldErrors(serverFieldErrors);
+        } else {
+          setFormError(accountErrorMessage(error, fallback));
+        }
       }
     } finally {
       setSubmitting(false);
@@ -83,7 +124,7 @@ export function AccountFormScreen({ onCancel, onCreated }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Nova conta</Text>
+      <Text style={styles.title}>{editing ? "Editar conta" : "Nova conta"}</Text>
 
       <Field label="Nome" error={fieldErrors.name}>
         <TextInput
@@ -146,7 +187,7 @@ export function AccountFormScreen({ onCancel, onCreated }: Props) {
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
             Ja existe conta conectada com nome, tipo e instituicao equivalentes. Confirme
-            se esta conta manual deve existir separadamente.
+            se esta conta manual deve {editing ? "continuar separada" : "existir separadamente"}.
           </Text>
           {duplicates.map((candidate) => (
             <Text key={candidate.id} style={styles.candidate}>
@@ -159,11 +200,14 @@ export function AccountFormScreen({ onCancel, onCreated }: Props) {
             onPress={() => void submit(true)}
             disabled={submitting}
           >
-            <Text style={styles.primaryLabel}>Criar assim mesmo</Text>
+            <Text style={styles.primaryLabel}>
+              {editing ? "Salvar assim mesmo" : "Criar assim mesmo"}
+            </Text>
           </Pressable>
         </View>
       ) : null}
 
+      {info ? <Text style={styles.noticeText}>{info}</Text> : null}
       {formError ? <Text style={styles.error}>{formError}</Text> : null}
 
       <Pressable
@@ -175,7 +219,9 @@ export function AccountFormScreen({ onCancel, onCreated }: Props) {
         {submitting ? (
           <ActivityIndicator color={theme.onAccent} />
         ) : (
-          <Text style={styles.primaryLabel}>Criar conta</Text>
+          <Text style={styles.primaryLabel}>
+            {editing ? "Salvar alteracoes" : "Criar conta"}
+          </Text>
         )}
       </Pressable>
 

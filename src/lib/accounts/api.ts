@@ -6,9 +6,11 @@ import {
   type ProblemDetails,
 } from "../api/errors";
 import {
+  accountIdSchema,
   accountListQuerySchema,
   accountPageSchema,
   accountSchema,
+  accountUpdateInputSchema,
   duplicateCandidatesSchema,
   manualAccountInputSchema,
 } from "./schema";
@@ -16,6 +18,7 @@ import type {
   Account,
   AccountListQuery,
   AccountPage,
+  AccountUpdateInput,
   DuplicateCandidate,
   ManualAccountInput,
 } from "./types";
@@ -58,6 +61,40 @@ export async function listAccounts(
       query: { page, pageSize },
     });
     return accountPageSchema.parse(raw);
+  } catch (error) {
+    throw toAccountsError(error);
+  }
+}
+
+/** PATCH /api/v1/accounts/{accountId} — atualiza campos de uma conta manual ativa. */
+export async function updateAccount(
+  accountId: string,
+  input: AccountUpdateInput,
+): Promise<Account> {
+  const id = accountIdSchema.parse(accountId);
+  const body = accountUpdateInputSchema.parse(input);
+  try {
+    const raw = await apiRequest<unknown>(`${ACCOUNTS_PATH}/${id}`, {
+      method: "PATCH",
+      body,
+    });
+    return accountSchema.parse(raw);
+  } catch (error) {
+    throw toAccountsError(error);
+  }
+}
+
+/**
+ * POST /api/v1/accounts/{accountId}/deactivate — desativacao logica e idempotente.
+ * A conta deixa de ser listada; nao ha reativacao nem exclusao fisica.
+ */
+export async function deactivateAccount(accountId: string): Promise<Account> {
+  const id = accountIdSchema.parse(accountId);
+  try {
+    const raw = await apiRequest<unknown>(`${ACCOUNTS_PATH}/${id}/deactivate`, {
+      method: "POST",
+    });
+    return accountSchema.parse(raw);
   } catch (error) {
     throw toAccountsError(error);
   }

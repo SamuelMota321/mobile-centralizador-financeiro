@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -9,8 +10,13 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../auth/AuthContext";
-import { listAccounts } from "../lib/accounts/api";
-import { ProblemDetailsError, PROBLEM_CODES } from "../lib/api/errors";
+import { deactivateAccount, listAccounts } from "../lib/accounts/api";
+import {
+  ACCOUNT_UNAVAILABLE_MESSAGE,
+  accountErrorMessage,
+  isAccountUnavailable,
+  isUnauthorized,
+} from "../lib/accounts/messages";
 import type { Account } from "../lib/accounts/types";
 import { theme } from "../theme";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
@@ -18,12 +24,22 @@ import { AccountFormScreen } from "./AccountFormScreen";
 
 type LoadState = "loading" | "ready" | "error";
 
+type Mode = { kind: "list" } | { kind: "create" } | { kind: "edit"; account: Account };
+
+interface Notice {
+  tone: "info" | "error";
+  text: string;
+}
+
 export function AccountsScreen() {
   const { signOut, handleUnauthorized } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [refreshing, setRefreshing] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [mode, setMode] = useState<Mode>({ kind: "list" });
+  const [notice, setNotice] = useState<Notice | null>(null);
+  // Conta com desativacao em andamento: bloqueia toque duplo e outras acoes nela.
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -31,10 +47,7 @@ export function AccountsScreen() {
       setAccounts(page.items);
       setState("ready");
     } catch (error) {
-      if (
-        error instanceof ProblemDetailsError &&
-        error.code === PROBLEM_CODES.authenticationRequired
-      ) {
+      if (isUnauthorized(error)) {
         await handleUnauthorized();
         return;
       }
@@ -52,14 +65,72 @@ export function AccountsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  if (creating) {
+  const deactivate = useCallback(
+    async (account: Account) => {
+      setBusyId(account.id);
+      setNotice(null);
+      try {
+        await deactivateAccount(account.id);
+        setNotice({
+          tone: "info",
+          text: "Conta desativada. Ela deixou de aparecer na lista e o historico foi preservado.",
+        });
+        await load();
+      } catch (error) {
+        if (isUnauthorized(error)) {
+          await handleUnauthorized();
+          return;
+        }
+        if (isAccountUnavailable(error)) {
+          setNotice({ tone: "info", text: ACCOUNT_UNAVAILABLE_MESSAGE });
+          await load();
+          return;
+        }
+        setNotice({
+          tone: "error",
+          text: accountErrorMessage(error, "Nao foi possivel desativar a conta."),
+        });
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [handleUnauthorized, load],
+  );
+
+  const confirmDeactivate = useCallback(
+    (account: Account) => {
+      Alert.alert(
+        "Desativar conta",
+        `Desativar \u201c${account.name}\u201d? Ela deixa de aparecer na lista e nao podera ser editada nem reativada. O historico e preservado.`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Desativar",
+            style: "destructive",
+            onPress: () => void deactivate(account),
+          },
+        ],
+        { cancelable: true },
+      );
+    },
+    [deactivate],
+  );
+
+  const finishForm = useCallback(
+    (message: string) => {
+      setMode({ kind: "list" });
+      setNotice({ tone: "info", text: message });
+      void load();
+    },
+    [load],
+  );
+
+  if (mode.kind !== "list") {
     return (
       <AccountFormScreen
-        onCancel={() => setCreating(false)}
-        onCreated={() => {
-          setCreating(false);
-          void load();
-        }}
+        account={mode.kind === "edit" ? mode.account : undefined}
+        onCancel={() => setMode({ kind: "list" })}
+        onDone={finishForm}
       />
     );
   }
@@ -72,6 +143,20 @@ export function AccountsScreen() {
           <Text style={styles.signOut}>Sair</Text>
         </Pressable>
       </View>
+
+      {notice ? (
+        <View
+          style={[styles.notice, notice.tone === "error" && styles.noticeError]}
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={notice.tone === "error" ? styles.noticeErrorText : styles.noticeText}>
+            {notice.text}
+          </Text>
+          <Pressable onPress={() => setNotice(null)} accessibilityRole="button">
+            <Text style={styles.signOut}>Fechar</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {state === "loading" ? (
         <View style={styles.center}>
@@ -99,25 +184,59 @@ export function AccountsScreen() {
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <View style={styles.item}>
-              <View style={styles.itemMain}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemMeta}>
-                  {ACCOUNT_TYPE_LABELS[item.type]}
-                  {item.institutionName ? ` · ${item.institutionName}` : ""}
-                  {item.origin === "connected" ? " · conectada" : ""}
-                </Text>
+          renderItem={({ item }) => {
+            const busy = busyId === item.id;
+            return (
+              <View style={styles.item}>
+                <View style={styles.itemRow}>
+                  <View style={styles.itemMain}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemMeta}>
+                      {ACCOUNT_TYPE_LABELS[item.type]}
+                      {item.institutionName ? ` · ${item.institutionName}` : ""}
+                      {item.origin === "connected" ? " · conectada" : ""}
+                    </Text>
+                  </View>
+                  <Text style={styles.balance}>{item.initialBalance}</Text>
+                </View>
+
+                <View style={styles.actions}>
+                  {item.origin === "manual" ? (
+                    <Pressable
+                      onPress={() => setMode({ kind: "edit", account: item })}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Editar ${item.name}`}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.action}>Editar</Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.itemMeta}>Conectada · somente desativacao</Text>
+                  )}
+                  {busy ? (
+                    <ActivityIndicator color={theme.danger} />
+                  ) : (
+                    <Pressable
+                      onPress={() => confirmDeactivate(item)}
+                      disabled={busyId !== null}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Desativar ${item.name}`}
+                      hitSlop={8}
+                    >
+                      <Text style={[styles.action, styles.actionDanger]}>Desativar</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
-              <Text style={styles.balance}>{item.initialBalance}</Text>
-            </View>
-          )}
+            );
+          }}
         />
       )}
 
       <Pressable
         style={styles.primary}
-        onPress={() => setCreating(true)}
+        onPress={() => setMode({ kind: "create" })}
         accessibilityRole="button"
       >
         <Text style={styles.primaryLabel}>Criar conta</Text>
@@ -165,15 +284,49 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   item: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     gap: 12,
     padding: 16,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.border,
     backgroundColor: theme.surface,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+  action: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.consciencia,
+  },
+  actionDanger: {
+    color: theme.danger,
+  },
+  notice: {
+    gap: 8,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 10,
+    backgroundColor: theme.surface,
+  },
+  noticeError: {
+    borderColor: theme.danger,
+  },
+  noticeText: {
+    color: theme.confianca,
+  },
+  noticeErrorText: {
+    color: theme.danger,
   },
   itemMain: {
     flex: 1,

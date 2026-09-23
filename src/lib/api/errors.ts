@@ -24,12 +24,15 @@ export const problemDetailsSchema = z.object({
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
 
-/** Codigos conhecidos do backend (@ backend 17ca76d). */
+/** Codigos conhecidos do backend (@ backend fa9b62a). */
 export const PROBLEM_CODES = {
   invalidRequest: "INVALID_REQUEST",
   authenticationRequired: "AUTHENTICATION_REQUIRED",
   identityContextUnavailable: "IDENTITY_CONTEXT_UNAVAILABLE",
   possibleConnectedAccountDuplicate: "POSSIBLE_CONNECTED_ACCOUNT_DUPLICATE",
+  accountNotFound: "ACCOUNT_NOT_FOUND",
+  accountArchived: "ACCOUNT_ARCHIVED",
+  connectedAccountReadOnly: "CONNECTED_ACCOUNT_READ_ONLY",
   internalError: "INTERNAL_ERROR",
 } as const;
 
