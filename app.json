@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "mobile-centralizador-financeiro",
+    "name": "Coinciente",
     "slug": "mobile-centralizador-financeiro",
     "version": "1.0.0",
+    "scheme": "coinciente",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,6 +21,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser"
+    ]
   }
 }

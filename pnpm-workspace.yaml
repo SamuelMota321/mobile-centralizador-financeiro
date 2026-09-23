@@ -1,2 +1,19 @@
 minimumReleaseAgeExclude:
   - zod@4.6.1
+  - expo-application@57.0.3
+  - expo-auth-session@57.0.12
+  - expo-constants@57.0.18
+  - expo-crypto@57.0.3
+  - expo-linking@57.0.10
+  - expo-secure-store@57.0.4
+  - expo-web-browser@57.0.3
+  - '@expo/cli@57.0.24'
+  - '@expo/fingerprint@0.20.13'
+  - '@expo/prebuild-config@57.0.16'
+  - expo-asset@57.0.17
+  - expo-file-system@57.0.7
+  - expo-font@57.0.4
+  - expo-keep-awake@57.0.2
+  - expo-modules-autolinking@57.0.13
+  - expo-modules-core@57.0.18
+  - expo@57.0.22

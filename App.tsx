@@ -1,20 +1,38 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { AuthProvider, useAuth } from "./src/auth/AuthContext";
+import { AccountsScreen } from "./src/screens/AccountsScreen";
+import { SignInScreen } from "./src/screens/SignInScreen";
+import { theme } from "./src/theme";
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <AuthProvider>
+      <StatusBar style="dark" />
+      <Root />
+    </AuthProvider>
   );
 }
 
+function Root() {
+  const { status } = useAuth();
+
+  if (status === "loading") {
+    return (
+      <View style={styles.splash}>
+        <ActivityIndicator color={theme.consciencia} />
+      </View>
+    );
+  }
+
+  return status === "authenticated" ? <AccountsScreen /> : <SignInScreen />;
+}
+
 const styles = StyleSheet.create({
-  container: {
+  splash: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.respiro,
   },
 });

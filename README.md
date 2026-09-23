@@ -4,10 +4,11 @@ Cliente mobile (React Native + Expo, TypeScript) do MVP acadêmico. Aplicação 
 da web: não compartilha componentes, navegação nem código-fonte. Consome o contrato
 OpenAPI do backend sob `/api/v1`.
 
-Esta fase (S1-02 + parcial S1-03) cobre a fundação: bootstrap, configuração de ambiente,
-wrapper HTTP e camada de dados provisória alinhada ao contrato. Autenticação Auth0 e as
-telas de contas pertencem a fases posteriores — hoje o app sobe com a tela padrão do
-template.
+Esta fase (S1-04 + S1-05) cobre login Auth0, área protegida, logout e as telas de criar
+e listar contas.
+
+O login usa Authorization Code com PKCE (aplicação Auth0 do tipo **Native**, sem client
+secret) e o token fica no Keychain/Keystore via `expo-secure-store`.
 
 ## Requisitos
 
@@ -80,6 +81,25 @@ Descubra o IP da LAN com `ip addr` (Linux/macOS) ou `ipconfig` (Windows).
 
 O `.env` é ignorado pelo git. Nunca coloque credenciais reais.
 
+### 4.1. Configurar o Auth0
+
+No painel do Auth0, registre uma aplicação do tipo **Native** (PKCE, sem client secret) e
+adicione tanto em *Allowed Callback URLs* quanto em *Allowed Logout URLs*:
+
+- `coinciente://*`
+- no Expo Go, também a URL `exp://...` que o `pnpm start` imprime no terminal
+
+Preencha no `.env`:
+
+```bash
+EXPO_PUBLIC_AUTH0_DOMAIN=seu-tenant.us.auth0.com
+EXPO_PUBLIC_AUTH0_CLIENT_ID=...
+EXPO_PUBLIC_AUTH0_AUDIENCE=...   # idêntico ao AUTH0_AUDIENCE do backend
+```
+
+`EXPO_PUBLIC_AUTH0_AUDIENCE` precisa ser exatamente o mesmo do backend — se divergir, o
+backend recusa o token com 401.
+
 ### 5. Iniciar o Metro (servidor de desenvolvimento do Expo)
 
 ```bash
@@ -127,8 +147,10 @@ Parar o Metro: `Ctrl+C`.
 
 ### 6. Verificar
 
-Com o app aberto, você vê a tela padrão "Open up App.tsx to start working on your
-app!". Isso confirma que o bundler compila e o app renderiza.
+1. O app abre na tela **Entrar**.
+2. Tocar em **Entrar** abre o Auth0 no navegador do sistema e volta ao app autenticado.
+3. A lista de contas aparece (vazia no primeiro acesso) e **Criar conta** funciona.
+4. **Sair** limpa a sessão e volta à tela de entrada.
 
 ## Checagens de qualidade
 
@@ -152,14 +174,21 @@ npx expo-doctor    # 21 verificações de compatibilidade do SDK
 
 | Caminho | Responsabilidade |
 |---|---|
-| `App.tsx` | tela raiz (template) |
+| `App.tsx` | raiz: alterna entre área pública e protegida pelo estado de autenticação |
+| `src/auth/` | configuração Auth0, sessão no SecureStore e o contexto de autenticação |
+| `src/screens/` | telas de entrada, listagem e criação de conta |
+| `src/theme.ts` | paleta Coinciente |
 | `src/lib/api/config.ts` | base URL da API a partir do ambiente |
 | `src/lib/api/http-client.ts` | wrapper `fetch` (JSON, injeção de token, erros normalizados) |
 | `src/lib/api/CONTRACT.md` | estado do contrato OpenAPI e opções de gerador |
-| `src/lib/accounts/` | tipos e Zod de borda **provisórios** para contas |
+| `src/lib/accounts/` | tipos e Zod de borda para contas |
 
 ## Ambiente
 
-`EXPO_PUBLIC_API_BASE_URL` é obrigatória. Variáveis com prefixo `EXPO_PUBLIC_` são
-embutidas no bundle — não são segredo. Credenciais do Auth0 entram na fase 3 e nunca
-são versionadas. `.env.example` não contém credenciais.
+Todas as variáveis do `.env.example` são obrigatórias. Variáveis com prefixo
+`EXPO_PUBLIC_` são embutidas no bundle — **não são segredo**, e por isso a aplicação
+Auth0 é do tipo Native: domínio, client ID e audience são identificadores públicos, e não
+existe client secret no dispositivo.
+
+O access token fica só no `expo-secure-store` (Keychain no iOS, Keystore no Android),
+nunca em log nem em armazenamento comum. `.env` é ignorado pelo git.
