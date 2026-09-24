@@ -8,6 +8,13 @@ A Sprint 1 (S1-04 a S1-07) cobre login Auth0, área protegida, logout e a manute
 contas manuais: criar, listar, editar e desativar (com confirmação), além do isolamento de
 dados entre sessões.
 
+A Sprint 2 (S2-04 a S2-07) acrescenta movimentações (receita, despesa e transferência
+contábil entre contas próprias, com Idempotency-Key), categorias pessoais, categorização
+manual com estados incerto e não reconhecido, regras pessoais de categorização com
+precedência explicada e o isolamento de estado entre sessões. A interface segue o Style
+Guide 1.0 (`PRODUCT.md`, `DESIGN.md`): fontes Manrope e Newsreader, tema claro e escuro,
+abas embaixo e áreas seguras respeitadas.
+
 O login usa Authorization Code com PKCE (aplicação Auth0 do tipo **Native**, sem client
 secret) e o token fica no Keychain/Keystore via `expo-secure-store`.
 
@@ -47,6 +54,9 @@ cp .env.example .env          # troque cada replace_me por uma senha local
 docker compose up -d --wait   # requer Docker Desktop rodando
 curl http://localhost:3000/api/v1/health/ready   # esperado: {"status":"ok"}
 ```
+
+> O backend usa **npm**, não pnpm. Fora do Docker, use `npm ci` e `npm run start:dev` na
+> pasta dele. Um `pnpm install` no backend falha com `ERR_PNPM_IGNORED_BUILDS`.
 
 > **Portas ocupadas?** Se `3000`/`5432` já estiverem em uso, crie
 > `backend-centralizador-financeiro/compose.override.yaml`:
@@ -154,9 +164,9 @@ Parar o Metro: `Ctrl+C`.
 
 1. O app abre na tela **Entrar**.
 2. Tocar em **Entrar** abre o Auth0 no navegador do sistema e volta ao app autenticado.
-3. A lista de contas aparece (vazia no primeiro acesso); **Criar conta**, **Editar** e
-   **Desativar** funcionam.
-4. **Sair** limpa a sessão e volta à tela de entrada.
+3. O app abre em **Movimentações**; as abas embaixo levam a Contas, Categorias e Regras.
+   Formulários abrem em tela cheia e o Voltar do Android os fecha. Datas em DD/MM/AAAA.
+4. **Sair** limpa a sessão e volta à tela de entrada; nenhum dado da sessão anterior aparece.
 
 ## Checagens de qualidade
 
@@ -173,12 +183,20 @@ credenciais. Os arquivos `*.test.ts` ficam ao lado do código testado.
 
 | Arquivo | O que garante |
 |---|---|
-| `src/lib/accounts/patch.test.ts` | PATCH só com campos alterados; saldo e data sempre juntos; comparação de valores sem `Number` |
-| `src/lib/accounts/schema.test.ts` | validação de borda da criação e da edição espelhando o contrato |
-| `src/lib/accounts/messages.test.ts` | mensagens em pt-BR por código; 404 e conta arquivada indistinguíveis; 401 com ou sem Problem Details encerra a sessão |
-| `src/lib/accounts/api.test.ts` | bearer do provedor ativo e ausente após logout; rotas e corpo de update/deactivate |
+| `src/lib/money.test.ts` | entrada pt-BR normalizada e formatação em BRL sem `Number` (sem erro de ponto flutuante) |
+| `src/lib/civil-date.test.ts` | data civil sem fuso, anos bissextos, datas inexistentes e DD/MM/AAAA |
+| `src/lib/idempotency.test.ts` | chave UUID nova (`expo-crypto`) e quando trocá-la (`REUSED`/`EXPIRED`) |
+| `src/lib/api/pagination.test.ts` | leitura de todas as páginas para seletores, com aviso de truncamento |
+| `src/lib/api/contract.test.ts` | operações existem no `openapi.snapshot.json`; fixtures de cada resposta validadas contra o snapshot e contra o Zod; enums iguais aos do contrato |
+| `src/lib/accounts/*.test.ts` | contas: schema, PATCH só com alterações, mensagens, bearer ausente após logout |
+| `src/lib/transactions/*.test.ts` | movimentações: schemas de entrada, chamadas com Idempotency-Key, mensagens |
+| `src/lib/categories/api.test.ts`, `src/lib/category-rules/*.test.ts` | categorias e regras: chamadas, gramática da condição e limites de prioridade |
+| `src/screens/movement-input.test.ts` | formulários de movimentação: valor, data DD/MM/AAAA, transferência e classificação de erros (quando trocar a chave) |
+| `src/screens/movement-presentation.test.ts` | rótulos, sinais, estados de categorização e paginação sem itens repetidos |
+| `src/screens/category-logic.test.ts` | nome de categoria repetido e erros de categorias e de categorização |
+| `src/screens/rule-logic.test.ts` | frase da regra, gramática, PATCH só com o que mudou e erros de regras |
 | `src/auth/session-store.test.ts` | sessão salva e lida do SecureStore; conteúdo corrompido é apagado; expiração no limite exato |
-| `src/lib/api/contract.test.ts` | operações de contas do cliente existem no `openapi.snapshot.json` com os mesmos campos |
+| `src/auth/session-epoch.test.ts` | resposta de sessão anterior (ex.: 401 atrasado) não afeta a sessão atual |
 
 Telas e o fluxo real do Auth0 não têm teste automatizado (exigiriam biblioteca de teste de
 componentes ainda não decidida); são verificados pelo roteiro de demonstração abaixo.
@@ -200,14 +218,17 @@ componentes ainda não decidida); são verificados pelo roteiro de demonstraçã
 
 | Caminho | Responsabilidade |
 |---|---|
-| `App.tsx` | raiz: alterna entre área pública e protegida pelo estado de autenticação |
-| `src/auth/` | configuração Auth0, sessão no SecureStore e o contexto de autenticação |
-| `src/screens/` | telas de entrada, listagem (editar/desativar com confirmação) e formulário de conta |
-| `src/theme.ts` | paleta Coinciente |
+| `PRODUCT.md`, `DESIGN.md` | produto e sistema visual derivados do Style Guide |
+| `App.tsx` | raiz: carrega as fontes, provê áreas seguras e alterna entre entrada e seções do app |
+| `src/auth/` | configuração Auth0, sessão no SecureStore, contexto de autenticação e numeração de sessões |
+| `src/screens/` | telas de Movimentações, Contas, Categorias e Regras, formulários e a lógica testável de cada uma |
+| `src/ui/` | símbolo, ícones, botões, avisos, etiquetas, campos e as molduras `AppScreen`/`FormScreen` |
+| `src/theme.ts` | tokens claro e escuro, pesos da fonte e escala tipográfica |
 | `src/lib/api/config.ts` | base URL da API a partir do ambiente |
 | `src/lib/api/http-client.ts` | wrapper `fetch` (JSON, injeção de token, erros normalizados) |
 | `src/lib/api/CONTRACT.md` | estado do contrato OpenAPI e opções de gerador |
 | `src/lib/accounts/` | tipos, Zod de borda, funções da API, diff do PATCH e mensagens por código |
+| `src/lib/transactions/`, `categories/`, `category-rules/` | clientes tipados de Transactions, com Zod de borda e mensagens |
 | `vitest.config.mts` | configuração dos testes (variáveis fictícias) |
 
 ## Demonstração da Sprint 1
@@ -222,11 +243,18 @@ usuários de teste (A e B) do mesmo tenant Auth0 do backend. Não mostre `.env` 
 | 3 | **Criar conta** duas vezes | contas na lista e aviso "Conta criada." |
 | 4 | Criar conta com saldo `abc` | erro abaixo do campo, nada é criado |
 | 5 | **Editar** uma conta, mudar o nome | volta à lista com "Conta atualizada." |
-| 6 | **Editar** e salvar sem mudar nada | "Nenhuma alteracao para salvar." |
+| 6 | **Editar** e salvar sem mudar nada | "Nenhuma alteração para salvar." |
 | 7 | **Desativar** → **Cancelar** no alerta | nada muda |
 | 8 | **Desativar** → **Desativar** no alerta | conta some com aviso de desativação |
-| 9 | Desativar uma conta pelo web e editá-la no app | "Esta conta nao foi encontrada ou nao esta mais disponivel." e lista recarregada |
+| 9 | Desativar uma conta pelo web e editá-la no app | "Esta conta não foi encontrada ou não está mais disponível." e lista recarregada |
 | 10 | **Sair** e entrar como B | nenhuma conta de A aparece |
+
+## Demonstração da Sprint 2
+
+O roteiro completo (web e mobile, usuários A e B, precedência de regras, reenvio sem
+duplicar e isolamento) está em
+`documentacao-centralizador-financeiro/prompts/sprint2/dev2/roteiro-demonstracao-sprint-2.md`.
+A parte mobile exige a aplicação Auth0 do tipo Native configurada (passo 4.1).
 
 ## Ambiente
 

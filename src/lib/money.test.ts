@@ -53,3 +53,17 @@ describe("formatMoney", () => {
     expect(formatMoney("12,5")).toBe("12,5");
   });
 });
+
+describe("sem erro de ponto flutuante", () => {
+  // Valores que em Number viram 0.07000000000000001, 0.29000000000000004 etc.
+  it.each([
+    ["0,07", "0.07", "R$ 0,07"],
+    ["0,29", "0.29", "R$ 0,29"],
+    ["1,15", "1.15", "R$ 1,15"],
+    ["4,35", "4.35", "R$ 4,35"],
+    ["1.234.567.890.123.456,78", "1234567890123456.78", "R$ 1.234.567.890.123.456,78"],
+  ])("%s é lido e formatado exatamente", (raw, normalized, formatted) => {
+    expect(parseMoneyInput(raw)).toBe(normalized);
+    expect(formatMoney(normalized)).toBe(formatted);
+  });
+});
