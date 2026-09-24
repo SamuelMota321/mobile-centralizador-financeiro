@@ -10,7 +10,7 @@ function pages(total: number) {
 }
 
 describe("listAllPages", () => {
-  it("carrega todas as paginas ate o total", async () => {
+  it("carrega todas as páginas até o total", async () => {
     const fetchPage = pages(250);
     const result = await listAllPages(fetchPage);
     expect(result.items).toHaveLength(250);

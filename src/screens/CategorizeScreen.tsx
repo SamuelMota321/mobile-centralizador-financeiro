@@ -1,23 +1,25 @@
 import { useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text } from "react-native";
+import { Text, View } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { formatCivilDate } from "../lib/civil-date";
 import { updateTransactionCategory } from "../lib/transactions/api";
 import type { Transaction, TransactionCategoryUpdate } from "../lib/transactions/types";
-import { theme } from "../theme";
+import { makeStyles, radius, type } from "../theme";
+import { Button, Notice } from "../ui/controls";
+import { ChoiceGroup, Field } from "../ui/fields";
+import { FormScreen } from "../ui/screens";
 import { classifyCategorizeError } from "./category-logic";
-import { ChoiceGroup, Field, formStyles as styles } from "./movement-form-parts";
 import { type CategoryOption, signedAmount } from "./movement-presentation";
 
 interface Props {
   transaction: Transaction;
-  /** Somente categorias ativas: arquivadas nunca sao oferecidas. */
+  /** Somente categorias ativas: arquivadas nunca são oferecidas. */
   activeCategories: CategoryOption[];
   truncated: boolean;
   onCancel: () => void;
-  /** Recebe a TransactionView devolvida pela API, nunca uma suposicao local. */
+  /** Recebe a TransactionView devolvida pela API, nunca uma suposição local. */
   onDone: (updated: Transaction, message: string) => void;
-  /** A lista (categorias ou movimentacoes) mudou: volta e recarrega com a mensagem. */
+  /** A lista (categorias ou movimentações) mudou: volta e recarrega com a mensagem. */
   onStale: (message: string) => void;
   onGoToCategories: () => void;
 }
@@ -34,6 +36,7 @@ export function CategorizeScreen({
   onGoToCategories,
 }: Props) {
   const { handleUnauthorized } = useAuth();
+  const styles = useStyles();
   const initial = activeCategories.some((category) => category.id === transaction.categoryId)
     ? (transaction.categoryId ?? "")
     : "";
@@ -63,8 +66,8 @@ export function CategorizeScreen({
         intent === "category"
           ? "Categoria atualizada."
           : intent === "uncertain"
-            ? "Movimentacao marcada como categoria incerta."
-            : "Movimentacao marcada como nao reconhecida.",
+            ? "Movimentação marcada como categoria incerta."
+            : "Movimentação marcada como não reconhecida.",
       );
     } catch (error) {
       const failure = classifyCategorizeError(error);
@@ -82,26 +85,66 @@ export function CategorizeScreen({
   }
 
   const busy = pending !== null;
+  const hasCategories = activeCategories.length > 0;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title} accessibilityRole="header">
-        {transaction.categorizationStatus === "unclassified" ? "Categorizar" : "Corrigir categoria"}
-      </Text>
-      <Text style={styles.helper}>
-        {transaction.description ?? "Sem descricao"} · {formatCivilDate(transaction.occurredOn)} ·{" "}
-        {signedAmount(transaction).text}
-      </Text>
-
-      {activeCategories.length === 0 ? (
+    <FormScreen
+      title={transaction.categorizationStatus === "unclassified" ? "Categorizar" : "Corrigir categoria"}
+      description="Se não souber agora, marque como incerta ou não reconhecida e corrija depois."
+      onCancel={onCancel}
+      cancelDisabled={busy}
+      footer={
         <>
-          <Text style={styles.helper}>Voce ainda nao tem categorias ativas.</Text>
-          <Pressable style={styles.secondary} onPress={onGoToCategories} accessibilityRole="button">
-            <Text style={styles.secondaryLabel}>Criar uma categoria</Text>
-          </Pressable>
+          {hasCategories ? (
+            <Button
+              label="Aplicar categoria"
+              onPress={() => void submit("category")}
+              loading={pending === "category"}
+              disabled={busy}
+            />
+          ) : null}
+          <View style={styles.secondaryActions}>
+            <View style={styles.flex}>
+              <Button
+                variant="secondary"
+                label="Incerta"
+                accessibilityLabel="Marcar como categoria incerta"
+                onPress={() => void submit("uncertain")}
+                loading={pending === "uncertain"}
+                disabled={busy}
+                compact
+              />
+            </View>
+            <View style={styles.flex}>
+              <Button
+                variant="secondary"
+                label="Não reconhecida"
+                accessibilityLabel="Marcar como não reconhecida"
+                onPress={() => void submit("unrecognized")}
+                loading={pending === "unrecognized"}
+                disabled={busy}
+                compact
+              />
+            </View>
+          </View>
         </>
-      ) : (
-        <Field label="Categoria" error={fieldError ?? undefined}>
+      }
+    >
+      <View style={styles.summary} accessible>
+        <Text style={styles.summaryTitle} numberOfLines={2}>
+          {transaction.description ?? "Sem descrição"}
+        </Text>
+        <Text style={styles.summaryMeta}>
+          {formatCivilDate(transaction.occurredOn)} · {signedAmount(transaction).text}
+        </Text>
+      </View>
+
+      {hasCategories ? (
+        <Field
+          label="Categoria"
+          error={fieldError ?? undefined}
+          help={truncated ? "Apenas as primeiras categorias aparecem nesta lista." : undefined}
+        >
           <ChoiceGroup
             label="Categoria"
             options={activeCategories.map((category) => ({ value: category.id, label: category.name }))}
@@ -109,64 +152,31 @@ export function CategorizeScreen({
             onSelect={setCategoryId}
             disabled={busy}
           />
-          {truncated ? (
-            <Text style={styles.helper}>Apenas as primeiras categorias aparecem nesta lista.</Text>
-          ) : null}
         </Field>
+      ) : (
+        <Notice
+          tone="info"
+          text="Você ainda não tem categorias ativas. Crie uma para organizar esta movimentação."
+          action={{ label: "Criar uma categoria", onPress: onGoToCategories }}
+        />
       )}
 
-      <Text style={styles.helper}>
-        Se nao souber a categoria agora, marque como incerta ou nao reconhecida. Voce pode
-        corrigir depois.
-      </Text>
-
-      {formError ? (
-        <Text style={styles.formError} accessibilityLiveRegion="polite">
-          {formError}
-        </Text>
-      ) : null}
-
-      {activeCategories.length > 0 ? (
-        <Pressable
-          style={[styles.primary, busy && styles.primaryDisabled]}
-          onPress={() => void submit("category")}
-          disabled={busy}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: busy, busy: pending === "category" }}
-        >
-          {pending === "category" ? (
-            <ActivityIndicator color={theme.onAccent} />
-          ) : (
-            <Text style={styles.primaryLabel}>Aplicar categoria</Text>
-          )}
-        </Pressable>
-      ) : null}
-
-      <Pressable
-        style={styles.secondary}
-        onPress={() => void submit("uncertain")}
-        disabled={busy}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: busy, busy: pending === "uncertain" }}
-      >
-        <Text style={styles.secondaryLabel}>Marcar como incerta</Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.secondary}
-        onPress={() => void submit("unrecognized")}
-        disabled={busy}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: busy, busy: pending === "unrecognized" }}
-      >
-        <Text style={styles.secondaryLabel}>Marcar como nao reconhecida</Text>
-      </Pressable>
-
-      <Pressable onPress={onCancel} disabled={busy} accessibilityRole="button" hitSlop={8}>
-        <Text style={[styles.helper, { textAlign: "center", textDecorationLine: "underline" }]}>
-          Cancelar
-        </Text>
-      </Pressable>
-    </ScrollView>
+      {formError ? <Notice tone="error" text={formError} /> : null}
+    </FormScreen>
   );
 }
+
+const useStyles = makeStyles((c) => ({
+  summary: {
+    gap: 4,
+    padding: 16,
+    borderRadius: radius.panel,
+    borderWidth: 1,
+    borderColor: c.line,
+    backgroundColor: c.surface,
+  },
+  summaryTitle: { ...type.body, fontFamily: "Manrope_700Bold", color: c.foreground },
+  summaryMeta: { ...type.bodySmall, color: c.muted, fontVariant: ["tabular-nums"] },
+  secondaryActions: { flexDirection: "row", gap: 10 },
+  flex: { flex: 1 },
+}));

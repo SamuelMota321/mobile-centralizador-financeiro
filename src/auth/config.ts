@@ -4,7 +4,7 @@ const audience = process.env.EXPO_PUBLIC_AUTH0_AUDIENCE;
 
 if (!domain || !clientId || !audience) {
   throw new Error(
-    "Auth0 nao configurado. Copie .env.example para .env e preencha EXPO_PUBLIC_AUTH0_DOMAIN, EXPO_PUBLIC_AUTH0_CLIENT_ID e EXPO_PUBLIC_AUTH0_AUDIENCE.",
+    "Auth0 não configurado. Copie .env.example para .env e preencha EXPO_PUBLIC_AUTH0_DOMAIN, EXPO_PUBLIC_AUTH0_CLIENT_ID e EXPO_PUBLIC_AUTH0_AUDIENCE.",
   );
 }
 

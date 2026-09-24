@@ -14,7 +14,7 @@ const validInput = {
 };
 
 describe("manualAccountInputSchema", () => {
-  it("aceita uma conta valida", () => {
+  it("aceita uma conta válida", () => {
     expect(manualAccountInputSchema.safeParse(validInput).success).toBe(true);
   });
 
@@ -27,7 +27,7 @@ describe("manualAccountInputSchema", () => {
     expect(manualAccountInputSchema.safeParse({ ...validInput, name: "   " }).success).toBe(false);
   });
 
-  it("normaliza instituicao em branco para null", () => {
+  it("normaliza instituição em branco para null", () => {
     const parsed = manualAccountInputSchema.parse({ ...validInput, institutionName: "  " });
     expect(parsed.institutionName).toBeNull();
   });
@@ -40,7 +40,7 @@ describe("manualAccountInputSchema", () => {
     expect(manualAccountInputSchema.safeParse({ ...validInput, initialBalance }).success).toBe(true);
   });
 
-  it("recusa data futura e data em formato invalido", () => {
+  it("recusa data futura e data em formato inválido", () => {
     expect(manualAccountInputSchema.safeParse({ ...validInput, initialBalanceAsOf: "2999-01-01" }).success).toBe(false);
     expect(manualAccountInputSchema.safeParse({ ...validInput, initialBalanceAsOf: "10/09/2026" }).success).toBe(false);
   });
@@ -59,7 +59,7 @@ describe("accountUpdateInputSchema", () => {
     expect(accountUpdateInputSchema.safeParse({ confirmPossibleDuplicate: true }).success).toBe(false);
   });
 
-  it("exige saldo e data de referencia juntos", () => {
+  it("exige saldo e data de referência juntos", () => {
     expect(accountUpdateInputSchema.safeParse({ initialBalance: "10.00" }).success).toBe(false);
     expect(accountUpdateInputSchema.safeParse({ initialBalanceAsOf: "2026-09-10" }).success).toBe(false);
     expect(
@@ -71,7 +71,7 @@ describe("accountUpdateInputSchema", () => {
     expect(accountUpdateInputSchema.safeParse({ name: "a", origin: "manual" }).success).toBe(false);
   });
 
-  it("mantem a instituicao omitida e converte em branco para null", () => {
+  it("mantém a instituição omitida e converte em branco para null", () => {
     expect(accountUpdateInputSchema.parse({ name: "Reserva" }).institutionName).toBeUndefined();
     expect(accountUpdateInputSchema.parse({ institutionName: " " }).institutionName).toBeNull();
     expect(accountUpdateInputSchema.parse({ institutionName: null }).institutionName).toBeNull();

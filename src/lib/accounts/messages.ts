@@ -12,23 +12,23 @@ export function isUnauthorized(error: unknown): boolean {
 // O `detail` do backend e tecnico e em ingles; o usuario ve somente estes textos.
 // 404 e conta arquivada compartilham a mesma mensagem para nao revelar existencia.
 export const ACCOUNT_UNAVAILABLE_MESSAGE =
-  "Esta conta nao foi encontrada ou nao esta mais disponivel.";
+  "Esta conta não foi encontrada ou não está mais disponível.";
 
 const MESSAGES_BY_CODE: Record<string, string> = {
   [PROBLEM_CODES.accountNotFound]: ACCOUNT_UNAVAILABLE_MESSAGE,
   [PROBLEM_CODES.accountArchived]: ACCOUNT_UNAVAILABLE_MESSAGE,
   [PROBLEM_CODES.connectedAccountReadOnly]:
-    "Contas conectadas nao podem ser editadas aqui. Voce ainda pode desativa-las.",
+    "Contas conectadas não podem ser editadas aqui. Você ainda pode desativá-las.",
   [PROBLEM_CODES.invalidRequest]: "Revise os campos destacados.",
-  [PROBLEM_CODES.authenticationRequired]: "Sua sessao expirou. Entre novamente.",
+  [PROBLEM_CODES.authenticationRequired]: "Sua sessão expirou. Entre novamente.",
   [PROBLEM_CODES.identityContextUnavailable]:
-    "Nao foi possivel confirmar seu acesso. Entre novamente.",
+    "Não foi possível confirmar seu acesso. Entre novamente.",
 };
 
 const FIELD_MESSAGES_BY_CODE: Record<string, string> = {
-  BALANCE_REFERENCE_PAIR_REQUIRED: "Informe saldo inicial e data de referencia juntos.",
+  BALANCE_REFERENCE_PAIR_REQUIRED: "Informe saldo inicial e data de referência juntos.",
   OUT_OF_RANGE: "Valor fora do limite permitido.",
-  IMMUTABLE_FIELD: "Este campo nao pode ser alterado.",
+  IMMUTABLE_FIELD: "Este campo não pode ser alterado.",
 };
 
 export function accountErrorMessage(error: unknown, fallback: string): string {
@@ -53,7 +53,7 @@ export function fieldErrorsFromProblem(error: unknown): Record<string, string> {
   const fieldErrors: Record<string, string> = {};
   for (const item of error.problem.errors ?? []) {
     if (!fieldErrors[item.path]) {
-      fieldErrors[item.path] = FIELD_MESSAGES_BY_CODE[item.code] ?? "Valor invalido.";
+      fieldErrors[item.path] = FIELD_MESSAGES_BY_CODE[item.code] ?? "Valor inválido.";
     }
   }
   return fieldErrors;

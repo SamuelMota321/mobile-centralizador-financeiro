@@ -8,7 +8,7 @@ export const categoryNameSchema = z
     z
       .string()
       .min(1, "Informe um nome para a categoria")
-      .max(100, "Use ate 100 caracteres"),
+      .max(100, "Use até 100 caracteres"),
   );
 
 export const categoryInputSchema = z.object({ name: categoryNameSchema }).strict();

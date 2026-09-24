@@ -1,19 +1,14 @@
 import { useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { formatCivilDate, todayCivilDate } from "../lib/civil-date";
 import { newIdempotencyKey } from "../lib/idempotency";
 import { formatMoney } from "../lib/money";
 import { createTransaction } from "../lib/transactions/api";
 import type { MovementType } from "../lib/transactions/types";
-import { theme } from "../theme";
-import {
-  accountChoices,
-  ChoiceGroup,
-  Field,
-  formStyles as styles,
-  selectedAccount,
-} from "./movement-form-parts";
+import { Button, Notice } from "../ui/controls";
+import { ChoiceGroup, Field, TextField } from "../ui/fields";
+import { FormScreen } from "../ui/screens";
+import { accountChoices, selectedAccount } from "./movement-form-helpers";
 import { classifySubmitError, type FieldErrors, parseMovementFields } from "./movement-input";
 import { accountLabel, type AccountOption } from "./movement-presentation";
 
@@ -36,16 +31,16 @@ export function MovementFormScreen({ accounts, onCancel, onDone, onAccountsStale
   const { handleUnauthorized } = useAuth();
 
   const [accountId, setAccountId] = useState(accounts.length === 1 ? accounts[0].id : "");
-  const [type, setType] = useState<MovementType>("expense");
+  const [movementType, setMovementType] = useState<MovementType>("expense");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => formatCivilDate(todayCivilDate()));
   const [description, setDescription] = useState("");
 
-  // Uma chave por formulario: a mesma em qualquer reenvio apos falha (o backend so a
-  // registra quando cria a movimentacao); nova somente quando o backend a recusa. Apos
-  // sucesso a tela fecha e o proximo formulario nasce com outra chave.
+  // Uma chave por formulário: a mesma em qualquer reenvio após falha (o backend só a
+  // registra quando cria a movimentação); nova somente quando o backend a recusa. Após
+  // sucesso a tela fecha e o próximo formulário nasce com outra chave.
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
-  // Bloqueia o toque duplo antes do re-render que desabilita o botao.
+  // Bloqueia o toque duplo antes do re-render que desabilita o botão.
   const inFlight = useRef(false);
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -60,7 +55,7 @@ export function MovementFormScreen({ accounts, onCancel, onDone, onAccountsStale
 
     const parsed = parseMovementFields({
       accountId: currentAccount,
-      type,
+      type: movementType,
       amount,
       date,
       description,
@@ -84,7 +79,7 @@ export function MovementFormScreen({ accounts, onCancel, onDone, onAccountsStale
         `${label} de ${formatMoney(transaction.amount)} registrada em ${accountLabel(transaction.accountId, accounts)}.${rule}`,
       );
     } catch (error) {
-      const failure = classifySubmitError(error, "Nao foi possivel registrar a movimentacao.");
+      const failure = classifySubmitError(error, "Não foi possível registrar a movimentação.");
       if (failure.kind === "unauthorized") {
         await handleUnauthorized();
       } else if (failure.kind === "fields") {
@@ -103,10 +98,22 @@ export function MovementFormScreen({ accounts, onCancel, onDone, onAccountsStale
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title} accessibilityRole="header">
-        Receita ou despesa
-      </Text>
+    <FormScreen
+      title="Receita ou despesa"
+      description="A movimentação aparece no histórico assim que o registro é confirmado."
+      onCancel={onCancel}
+      cancelDisabled={submitting}
+      footer={<Button label="Registrar movimentação" onPress={() => void submit()} loading={submitting} />}
+    >
+      <Field label="Tipo" error={fieldErrors.type}>
+        <ChoiceGroup
+          label="Tipo"
+          options={TYPE_OPTIONS}
+          selected={movementType}
+          onSelect={setMovementType}
+          disabled={submitting}
+        />
+      </Field>
 
       <Field label="Conta" error={fieldErrors.accountId}>
         <ChoiceGroup
@@ -118,81 +125,40 @@ export function MovementFormScreen({ accounts, onCancel, onDone, onAccountsStale
         />
       </Field>
 
-      <Field label="Tipo" error={fieldErrors.type}>
-        <ChoiceGroup
-          label="Tipo"
-          options={TYPE_OPTIONS}
-          selected={type}
-          onSelect={setType}
-          disabled={submitting}
-        />
-      </Field>
+      <TextField
+        label="Valor (R$)"
+        value={amount}
+        onChangeText={setAmount}
+        keyboardType="decimal-pad"
+        placeholder="0,00"
+        accessibilityLabel="Valor em reais"
+        style={{ fontVariant: ["tabular-nums"] }}
+        error={fieldErrors.amount}
+        editable={!submitting}
+      />
 
-      <Field label="Valor (R$)" error={fieldErrors.amount}>
-        <TextInput
-          style={[styles.input, styles.amountInput]}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          placeholder="0,00"
-          placeholderTextColor={theme.muted}
-          accessibilityLabel="Valor em reais"
-          editable={!submitting}
-        />
-      </Field>
+      <TextField
+        label="Data"
+        value={date}
+        onChangeText={setDate}
+        keyboardType="numbers-and-punctuation"
+        placeholder="DD/MM/AAAA"
+        maxLength={10}
+        accessibilityLabel="Data, no formato dia, mês e ano"
+        error={fieldErrors.occurredOn}
+        editable={!submitting}
+      />
 
-      <Field label="Data" error={fieldErrors.occurredOn}>
-        <TextInput
-          style={styles.input}
-          value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor={theme.muted}
-          accessibilityLabel="Data, no formato dia, mes e ano"
-          maxLength={10}
-          editable={!submitting}
-        />
-      </Field>
+      <TextField
+        label="Descrição (opcional)"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Ex.: Mercado do bairro"
+        error={fieldErrors.description}
+        editable={!submitting}
+      />
 
-      <Field label="Descricao (opcional)" error={fieldErrors.description}>
-        <TextInput
-          style={styles.input}
-          value={description}
-          onChangeText={setDescription}
-          accessibilityLabel="Descricao, opcional"
-          editable={!submitting}
-        />
-      </Field>
-
-      {formError ? (
-        <Text style={styles.formError} accessibilityLiveRegion="polite">
-          {formError}
-        </Text>
-      ) : null}
-
-      <Pressable
-        style={[styles.primary, submitting && styles.primaryDisabled]}
-        onPress={() => void submit()}
-        disabled={submitting}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: submitting, busy: submitting }}
-      >
-        {submitting ? (
-          <ActivityIndicator color={theme.onAccent} />
-        ) : (
-          <Text style={styles.primaryLabel}>Registrar movimentacao</Text>
-        )}
-      </Pressable>
-
-      <Pressable
-        style={styles.secondary}
-        onPress={onCancel}
-        disabled={submitting}
-        accessibilityRole="button"
-      >
-        <Text style={styles.secondaryLabel}>Cancelar</Text>
-      </Pressable>
-    </ScrollView>
+      {formError ? <Notice tone="error" text={formError} /> : null}
+    </FormScreen>
   );
 }

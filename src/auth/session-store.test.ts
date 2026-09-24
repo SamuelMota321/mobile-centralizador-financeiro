@@ -21,23 +21,23 @@ beforeEach(() => {
 });
 
 describe("session-store", () => {
-  it("salva e recupera a sessao", async () => {
+  it("salva e recupera a sessão", async () => {
     const session = { accessToken: "token-ficticio", expiresAt: 1_900_000_000_000 };
     await saveSession(session);
     expect(await loadSession()).toEqual(session);
   });
 
-  it("retorna null quando nao ha sessao", async () => {
+  it("retorna null quando não há sessão", async () => {
     expect(await loadSession()).toBeNull();
   });
 
-  it("apaga conteudo corrompido e trata como ausencia de sessao", async () => {
+  it("apaga conteúdo corrompido e trata como ausencia de sessão", async () => {
     store.set(SESSION_KEY, "{nao-e-json");
     expect(await loadSession()).toBeNull();
     expect(store.has(SESSION_KEY)).toBe(false);
   });
 
-  it("apaga sessao com formato inesperado", async () => {
+  it("apaga sessão com formato inesperado", async () => {
     store.set(SESSION_KEY, JSON.stringify({ accessToken: 123, expiresAt: "amanha" }));
     expect(await loadSession()).toBeNull();
     expect(store.has(SESSION_KEY)).toBe(false);
@@ -52,7 +52,7 @@ describe("session-store", () => {
 });
 
 describe("isExpired", () => {
-  it("considera expirada a sessao no instante exato de expiracao", () => {
+  it("considera expirada a sessão no instante exato de expiracao", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_000);
     expect(isExpired({ accessToken: "t", expiresAt: 1_000 })).toBe(true);
     expect(isExpired({ accessToken: "t", expiresAt: 999 })).toBe(true);

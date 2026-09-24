@@ -10,7 +10,7 @@ export const CATEGORY_STATUS_LABELS: Record<CategoryStatus, string> = {
 };
 
 export const DUPLICATE_NAME_MESSAGE =
-  "Voce ja tem uma categoria com este nome (inclusive arquivada). Use outro nome.";
+  "Você já tem uma categoria com este nome (inclusive arquivada). Use outro nome.";
 
 /**
  * Espelha o indice unico do banco (tenant_id, name): comparacao exata do nome ja
@@ -36,7 +36,7 @@ export function parseCategoryName(
 ): ParsedName {
   const parsed = categoryNameSchema.safeParse(raw);
   if (!parsed.success) {
-    return { ok: false, message: `${parsed.error.issues[0]?.message ?? "Informe um nome valido"}.` };
+    return { ok: false, message: `${parsed.error.issues[0]?.message ?? "Informe um nome válido"}.` };
   }
   if (hasNameConflict(parsed.data, categories, exceptId)) {
     return { ok: false, message: DUPLICATE_NAME_MESSAGE };
@@ -66,7 +66,7 @@ export function classifyCategoryError(error: unknown, fallback: string): Categor
         ? { kind: "field", message: "Use um nome entre 1 e 100 caracteres." }
         : {
             kind: "unavailable",
-            message: "Esta categoria nao pode ser alterada. Se ela foi arquivada, atualize a lista.",
+            message: "Esta categoria não pode ser alterada. Se ela foi arquivada, atualize a lista.",
           };
     }
     if (error.code === PROBLEM_CODES.identityContextUnavailable) {
@@ -76,7 +76,7 @@ export function classifyCategoryError(error: unknown, fallback: string): Categor
   // Inclui o 500 do nome repetido por corrida entre dois envios.
   return {
     kind: "message",
-    message: `${fallback} Se ja existe uma categoria com este nome, use outro. Tente de novo.`,
+    message: `${fallback} Se já existe uma categoria com este nome, use outro. Tente de novo.`,
   };
 }
 
@@ -86,7 +86,7 @@ export type CategorizeFailure =
   | { kind: "refresh"; message: string }
   | { kind: "message"; message: string };
 
-const CATEGORIZE_FALLBACK = "Nao foi possivel atualizar a categoria. Tente de novo.";
+const CATEGORIZE_FALLBACK = "Não foi possível atualizar a categoria. Tente de novo.";
 
 export function classifyCategorizeError(error: unknown): CategorizeFailure {
   if (isUnauthorized(error)) return { kind: "unauthorized" };
@@ -96,7 +96,7 @@ export function classifyCategorizeError(error: unknown): CategorizeFailure {
         return {
           kind: "refresh",
           message:
-            "Esta categoria foi arquivada e nao pode mais ser atribuida. A lista foi atualizada; escolha outra.",
+            "Esta categoria foi arquivada e não pode mais ser atribuída. A lista foi atualizada; escolha outra.",
         };
       case PROBLEM_CODES.categoryNotFound:
       case PROBLEM_CODES.transactionNotFound:

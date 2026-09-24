@@ -16,15 +16,15 @@ const accountName = z.string().trim().min(1).max(100);
 const initialBalanceInput = z
   .string()
   .trim()
-  .regex(INITIAL_BALANCE_INPUT, "Informe um valor decimal com ate duas casas");
+  .regex(INITIAL_BALANCE_INPUT, "Informe um valor decimal com até duas casas");
 
 const referenceDate = z
   .string()
   .regex(ISO_DATE, "Informe uma data no formato AAAA-MM-DD")
-  .refine((value) => !Number.isNaN(Date.parse(value)), "Data invalida")
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Data inválida")
   .refine(
     (value) => new Date(`${value}T00:00:00Z`).getTime() <= Date.now(),
-    "A data de referencia nao pode ser futura",
+    "A data de referência não pode ser futura",
   );
 
 export const manualAccountInputSchema = z
@@ -75,11 +75,11 @@ export const accountUpdateInputSchema = z
     (value) => (value.initialBalance === undefined) === (value.initialBalanceAsOf === undefined),
     {
       path: ["initialBalance"],
-      message: "Saldo inicial e data de referencia devem ser alterados juntos",
+      message: "Saldo inicial e data de referência devem ser alterados juntos",
     },
   )
   .refine((value) => UPDATABLE_FIELDS.some((key) => value[key] !== undefined), {
-    message: "Nenhuma alteracao para salvar",
+    message: "Nenhuma alteração para salvar",
   });
 
 export const accountListQuerySchema = z

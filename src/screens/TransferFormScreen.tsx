@@ -1,18 +1,13 @@
 import { useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { formatCivilDate, todayCivilDate } from "../lib/civil-date";
 import { newIdempotencyKey } from "../lib/idempotency";
 import { formatMoney } from "../lib/money";
 import { createTransfer } from "../lib/transactions/api";
-import { theme } from "../theme";
-import {
-  accountChoices,
-  ChoiceGroup,
-  Field,
-  formStyles as styles,
-  selectedAccount,
-} from "./movement-form-parts";
+import { Button, Notice } from "../ui/controls";
+import { ChoiceGroup, Field, TextField } from "../ui/fields";
+import { FormScreen } from "../ui/screens";
+import { accountChoices, selectedAccount } from "./movement-form-helpers";
 import { classifySubmitError, type FieldErrors, parseTransferFields } from "./movement-input";
 import { accountLabel, type AccountOption } from "./movement-presentation";
 
@@ -23,7 +18,7 @@ interface Props {
   onAccountsStale: () => void;
 }
 
-/** Transferencia entre contas do proprio usuario: registro contabil, nada e movimentado (RN-005). */
+/** Transferência entre contas do próprio usuário: registro contábil, nada é movimentado (RN-005). */
 export function TransferFormScreen({ accounts, onCancel, onDone, onAccountsStale }: Props) {
   const { handleUnauthorized } = useAuth();
 
@@ -33,7 +28,7 @@ export function TransferFormScreen({ accounts, onCancel, onDone, onAccountsStale
   const [date, setDate] = useState(() => formatCivilDate(todayCivilDate()));
   const [description, setDescription] = useState("");
 
-  // Mesmas regras de chave do formulario de receita/despesa.
+  // Mesmas regras de chave do formulário de receita/despesa.
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
   const inFlight = useRef(false);
 
@@ -71,10 +66,10 @@ export function TransferFormScreen({ accounts, onCancel, onDone, onAccountsStale
         transfer.entries.find((entry) => entry.transferSide === "incoming") ?? transfer.entries[1];
       const value = formatMoney(outgoing.amount);
       onDone(
-        `Registro contabil criado: saida de ${value} em ${accountLabel(outgoing.accountId, accounts)} e entrada de ${value} em ${accountLabel(incoming.accountId, accounts)}.`,
+        `Registro contábil criado: saída de ${value} em ${accountLabel(outgoing.accountId, accounts)} e entrada do mesmo valor em ${accountLabel(incoming.accountId, accounts)}.`,
       );
     } catch (error) {
-      const failure = classifySubmitError(error, "Nao foi possivel registrar a transferencia.");
+      const failure = classifySubmitError(error, "Não foi possível registrar a transferência.");
       if (failure.kind === "unauthorized") {
         await handleUnauthorized();
       } else if (failure.kind === "fields") {
@@ -95,15 +90,13 @@ export function TransferFormScreen({ accounts, onCancel, onDone, onAccountsStale
   const choices = accountChoices(accounts);
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title} accessibilityRole="header">
-        Transferencia entre contas
-      </Text>
-      <Text style={styles.helper}>
-        Registra que um valor passou de uma conta sua para outra conta sua. E apenas um
-        registro no Coinciente: nenhum dinheiro e movimentado.
-      </Text>
-
+    <FormScreen
+      title="Transferência entre contas"
+      description="Registra que um valor passou de uma conta sua para outra conta sua. É apenas um registro no Coinciente: nenhum dinheiro é movimentado."
+      onCancel={onCancel}
+      cancelDisabled={submitting}
+      footer={<Button label="Registrar transferência" onPress={() => void submit()} loading={submitting} />}
+    >
       <Field label="Conta de origem" error={fieldErrors.fromAccountId}>
         <ChoiceGroup
           label="Conta de origem"
@@ -124,71 +117,39 @@ export function TransferFormScreen({ accounts, onCancel, onDone, onAccountsStale
         />
       </Field>
 
-      <Field label="Valor (R$)" error={fieldErrors.amount}>
-        <TextInput
-          style={[styles.input, styles.amountInput]}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-          placeholder="0,00"
-          placeholderTextColor={theme.muted}
-          accessibilityLabel="Valor em reais"
-          editable={!submitting}
-        />
-      </Field>
+      <TextField
+        label="Valor (R$)"
+        value={amount}
+        onChangeText={setAmount}
+        keyboardType="decimal-pad"
+        placeholder="0,00"
+        accessibilityLabel="Valor em reais"
+        style={{ fontVariant: ["tabular-nums"] }}
+        error={fieldErrors.amount}
+        editable={!submitting}
+      />
 
-      <Field label="Data" error={fieldErrors.occurredOn}>
-        <TextInput
-          style={styles.input}
-          value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor={theme.muted}
-          accessibilityLabel="Data, no formato dia, mes e ano"
-          maxLength={10}
-          editable={!submitting}
-        />
-      </Field>
+      <TextField
+        label="Data"
+        value={date}
+        onChangeText={setDate}
+        keyboardType="numbers-and-punctuation"
+        placeholder="DD/MM/AAAA"
+        maxLength={10}
+        accessibilityLabel="Data, no formato dia, mês e ano"
+        error={fieldErrors.occurredOn}
+        editable={!submitting}
+      />
 
-      <Field label="Descricao (opcional)" error={fieldErrors.description}>
-        <TextInput
-          style={styles.input}
-          value={description}
-          onChangeText={setDescription}
-          accessibilityLabel="Descricao, opcional"
-          editable={!submitting}
-        />
-      </Field>
+      <TextField
+        label="Descrição (opcional)"
+        value={description}
+        onChangeText={setDescription}
+        error={fieldErrors.description}
+        editable={!submitting}
+      />
 
-      {formError ? (
-        <Text style={styles.formError} accessibilityLiveRegion="polite">
-          {formError}
-        </Text>
-      ) : null}
-
-      <Pressable
-        style={[styles.primary, submitting && styles.primaryDisabled]}
-        onPress={() => void submit()}
-        disabled={submitting}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: submitting, busy: submitting }}
-      >
-        {submitting ? (
-          <ActivityIndicator color={theme.onAccent} />
-        ) : (
-          <Text style={styles.primaryLabel}>Registrar transferencia</Text>
-        )}
-      </Pressable>
-
-      <Pressable
-        style={styles.secondary}
-        onPress={onCancel}
-        disabled={submitting}
-        accessibilityRole="button"
-      >
-        <Text style={styles.secondaryLabel}>Cancelar</Text>
-      </Pressable>
-    </ScrollView>
+      {formError ? <Notice tone="error" text={formError} /> : null}
+    </FormScreen>
   );
 }

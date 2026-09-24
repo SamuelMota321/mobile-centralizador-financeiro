@@ -10,11 +10,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const conditionValueSchema = z
   .string()
   .transform((value) => value.replace(/\s+/g, " ").trim())
-  .pipe(z.string().min(1, "Informe o valor da condicao"));
+  .pipe(z.string().min(1, "Informe o valor da condição"));
 
 const prioritySchema = z
   .number("Informe a prioridade")
-  .int("Use um numero inteiro")
+  .int("Use um número inteiro")
   .min(0, "Use zero ou mais");
 
 interface ConditionCandidate {
@@ -29,7 +29,7 @@ function checkCondition(value: ConditionCandidate, ctx: z.RefinementCtx): void {
     ctx.addIssue({
       code: "custom",
       path: ["conditionOperator"],
-      message: "Este campo aceita somente \"e igual a\"",
+      message: "Este campo aceita somente \"é igual a\"",
     });
   }
   if (field === "type" && conditionValue !== undefined) {
@@ -67,7 +67,7 @@ export const categoryRuleUpdateSchema = z
   })
   .strict()
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
-    message: "Nenhuma alteracao para salvar",
+    message: "Nenhuma alteração para salvar",
   })
   .superRefine(checkCondition);
 

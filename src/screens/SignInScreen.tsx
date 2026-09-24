@@ -1,77 +1,49 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
-import { theme } from "../theme";
+import { makeStyles, type } from "../theme";
+import { BrandLockup } from "../ui/brand";
+import { Button, Notice } from "../ui/controls";
 
 export function SignInScreen() {
   const { signIn, signingIn, error } = useAuth();
+  const styles = useStyles();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.brand}>COINCIENTE</Text>
-      <Text style={styles.title}>Clareza para cuidar do que e seu.</Text>
-      <Text style={styles.lead}>
-        Reuna suas contas em uma leitura unica, rastreavel e honesta.
-      </Text>
+    <View style={[styles.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
+      <BrandLockup />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View style={styles.intro}>
+        {/* Voz institucional: única aplicação de Newsreader no app. */}
+        <Text style={styles.title} accessibilityRole="header">
+          Clareza para cuidar do que é seu.
+        </Text>
+        <Text style={styles.lead}>
+          Reúna suas contas em uma leitura única, rastreável e honesta. O Coinciente organiza;
+          ele não movimenta dinheiro nem faz recomendações de investimento.
+        </Text>
+      </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-        onPress={() => void signIn()}
-        disabled={signingIn}
-        accessibilityRole="button"
-      >
-        {signingIn ? (
-          <ActivityIndicator color={theme.onAccent} />
-        ) : (
-          <Text style={styles.buttonLabel}>Entrar</Text>
-        )}
-      </Pressable>
+      <View style={styles.actions}>
+        {error ? <Notice tone="error" text={error} /> : null}
+        <Button label="Entrar" onPress={() => void signIn()} loading={signingIn} />
+        <Text style={styles.footnote}>Demonstração acadêmica com dados fictícios.</Text>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const useStyles = makeStyles((c) => ({
+  screen: {
     flex: 1,
-    justifyContent: "center",
-    gap: 16,
-    padding: 32,
-    backgroundColor: theme.respiro,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    backgroundColor: c.background,
   },
-  brand: {
-    fontSize: 12,
-    letterSpacing: 2,
-    color: theme.muted,
-  },
-  title: {
-    fontSize: 30,
-    color: theme.confianca,
-  },
-  lead: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: theme.muted,
-  },
-  error: {
-    color: theme.danger,
-  },
-  button: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    minWidth: 140,
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 999,
-    backgroundColor: theme.consciencia,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonLabel: {
-    color: theme.onAccent,
-    fontWeight: "600",
-    fontSize: 16,
-  },
-});
+  intro: { gap: 16 },
+  title: { ...type.display, color: c.foreground },
+  lead: { ...type.body, fontSize: 16, lineHeight: 25, color: c.bodyText },
+  actions: { gap: 12 },
+  footnote: { ...type.micro, fontFamily: "Manrope_500Medium", color: c.muted, textAlign: "center" },
+}));

@@ -16,7 +16,7 @@ const amountSchema = z.string().regex(AMOUNT, "Informe um valor maior que zero")
 
 const occurredOnSchema = z
   .string()
-  .refine(isRealCivilDate, "Informe uma data valida");
+  .refine(isRealCivilDate, "Informe uma data válida");
 
 /** Mesma normalizacao do backend: espacos colapsados; texto vazio vira null. */
 const descriptionSchema = z

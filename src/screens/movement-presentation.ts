@@ -5,7 +5,7 @@ import type { Transaction } from "../lib/transactions/types";
 export const PAGE_SIZE = 20;
 
 /** Conta ausente da lista de ativas (arquivada) ou lista indisponivel: nunca exibir o UUID. */
-export const ACCOUNT_FALLBACK_LABEL = "Conta indisponivel";
+export const ACCOUNT_FALLBACK_LABEL = "Conta indisponível";
 
 export interface AccountOption {
   id: string;
@@ -20,7 +20,7 @@ export interface CategoryOption {
 }
 
 /** Categoria referenciada mas ausente da lista (ou lista indisponivel): nunca exibir o UUID. */
-export const CATEGORY_FALLBACK_LABEL = "Categoria indisponivel";
+export const CATEGORY_FALLBACK_LABEL = "Categoria indisponível";
 
 export function accountLabel(accountId: string, accounts: AccountOption[] | null): string {
   const target = accountId.toLowerCase();
@@ -35,8 +35,8 @@ export function typeLabel(transaction: Pick<Transaction, "type" | "transferSide"
   if (transaction.type === "income") return "Receita";
   if (transaction.type === "expense") return "Despesa";
   return transaction.transferSide === "incoming"
-    ? "Transferencia entre contas — entrada"
-    : "Transferencia entre contas — saida";
+    ? "Transferência entre contas — entrada"
+    : "Transferência entre contas — saída";
 }
 
 /**
@@ -72,15 +72,15 @@ export function categorizationLabel(
   switch (transaction.categorizationStatus) {
     case "categorized": {
       const origin =
-        transaction.categorizationSource === "rule" ? "aplicada por regra" : "definida por voce";
+        transaction.categorizationSource === "rule" ? "aplicada por regra" : "definida por você";
       return `${categoryName(transaction.categoryId, categories)} · ${origin}`;
     }
     case "uncertain":
       return "Categoria incerta";
     case "unrecognized":
-      return "Nao reconhecida";
+      return "Não reconhecida";
     case "not_applicable":
-      return "Nao se aplica";
+      return "Não se aplica";
     case "unclassified":
       return "Sem categoria";
   }
@@ -98,4 +98,30 @@ export function appendPage(current: Transaction[], next: Transaction[]): Transac
 /** Troca a linha pela versao confirmada pela API, sem supor o resultado localmente. */
 export function replaceItem(items: Transaction[], updated: Transaction): Transaction[] {
   return items.map((item) => (item.id === updated.id ? updated : item));
+}
+
+export type CategorizationTone = "positive" | "warning" | "neutral";
+
+/** Tom da etiqueta; o texto de `categorizationLabel` sempre acompanha a cor. */
+export function categorizationTone(
+  transaction: Pick<Transaction, "categorizationStatus">,
+): CategorizationTone {
+  switch (transaction.categorizationStatus) {
+    case "categorized":
+      return "positive";
+    case "uncertain":
+    case "unrecognized":
+      return "warning";
+    default:
+      return "neutral";
+  }
+}
+
+export type MovementDirection = "in" | "out" | "transfer";
+
+export function movementDirection(
+  transaction: Pick<Transaction, "type" | "transferSide">,
+): MovementDirection {
+  if (transaction.type === "transfer") return "transfer";
+  return transaction.type === "income" ? "in" : "out";
 }

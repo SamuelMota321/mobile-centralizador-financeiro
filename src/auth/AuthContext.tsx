@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (result.type !== "success") {
         // Cancelamento do usuario nao e erro a ser exibido.
         if (result.type === "error") {
-          setError("Nao foi possivel entrar. Tente de novo.");
+          setError("Não foi possível entrar. Tente de novo.");
         }
         return;
       }
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await saveSession(session);
       applySession(session);
     } catch {
-      setError("Nao foi possivel entrar. Tente de novo.");
+      setError("Não foi possível entrar. Tente de novo.");
     } finally {
       setSigningIn(false);
     }

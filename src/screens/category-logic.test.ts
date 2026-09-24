@@ -26,7 +26,7 @@ const categories = [
 ];
 
 describe("hasNameConflict", () => {
-  it("compara exato, diferenciando maiusculas, e ignora a propria categoria", () => {
+  it("compara exato, diferenciando maiúsculas, e ignora a própria categoria", () => {
     expect(hasNameConflict("Mercado", categories)).toBe(true);
     expect(hasNameConflict("mercado", categories)).toBe(false);
     expect(hasNameConflict("Mercado", categories, "a")).toBe(false);
@@ -58,9 +58,9 @@ describe("parseCategoryName", () => {
 });
 
 describe("classifyCategoryError", () => {
-  const fallback = "Nao foi possivel criar a categoria.";
+  const fallback = "Não foi possível criar a categoria.";
 
-  it("401 com ou sem Problem Details descarta a sessao", () => {
+  it("401 com ou sem Problem Details descarta a sessão", () => {
     expect(classifyCategoryError(problem(401, "AUTHENTICATION_REQUIRED"), fallback)).toEqual({
       kind: "unauthorized",
     });
@@ -100,17 +100,17 @@ describe("classifyCategoryError", () => {
 describe("classifyCategorizeError", () => {
   it.each([
     [409, "CATEGORY_ARCHIVED", "arquivada"],
-    [404, "CATEGORY_NOT_FOUND", "nao esta mais disponivel"],
-    [404, "TRANSACTION_NOT_FOUND", "nao esta mais disponivel"],
-    [409, "TRANSACTION_CATEGORIZATION_NOT_ALLOWED", "Transferencias"],
-  ])("%i %s pede recarga com mensagem propria", (status, code, text) => {
+    [404, "CATEGORY_NOT_FOUND", "não está mais disponível"],
+    [404, "TRANSACTION_NOT_FOUND", "não está mais disponível"],
+    [409, "TRANSACTION_CATEGORIZATION_NOT_ALLOWED", "Transferências"],
+  ])("%i %s pede recarga com mensagem própria", (status, code, text) => {
     expect(classifyCategorizeError(problem(status, code))).toEqual({
       kind: "refresh",
       message: expect.stringContaining(text),
     });
   });
 
-  it("401 descarta a sessao", () => {
+  it("401 descarta a sessão", () => {
     expect(classifyCategorizeError(problem(401, "AUTHENTICATION_REQUIRED"))).toEqual({
       kind: "unauthorized",
     });
@@ -122,7 +122,7 @@ describe("classifyCategorizeError", () => {
   ])("%s vira mensagem segura", (_, error) => {
     expect(classifyCategorizeError(error)).toEqual({
       kind: "message",
-      message: "Nao foi possivel atualizar a categoria. Tente de novo.",
+      message: "Não foi possível atualizar a categoria. Tente de novo.",
     });
   });
 });

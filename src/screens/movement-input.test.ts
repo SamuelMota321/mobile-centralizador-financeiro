@@ -30,7 +30,7 @@ const movement = {
 };
 
 describe("parseMovementFields", () => {
-  it("normaliza valor, data e descricao para o contrato", () => {
+  it("normaliza valor, data e descrição para o contrato", () => {
     expect(parseMovementFields(movement)).toEqual({
       ok: true,
       input: {
@@ -85,7 +85,7 @@ describe("parseTransferFields", () => {
     description: "",
   };
 
-  it("aceita contas distintas e descricao vazia", () => {
+  it("aceita contas distintas e descrição vazia", () => {
     expect(parseTransferFields(transfer)).toMatchObject({
       ok: true,
       input: { amount: "50.00", description: null },
@@ -101,9 +101,9 @@ describe("parseTransferFields", () => {
 });
 
 describe("classifySubmitError", () => {
-  const fallback = "Nao foi possivel registrar.";
+  const fallback = "Não foi possível registrar.";
 
-  it("401 com ou sem Problem Details descarta a sessao", () => {
+  it("401 com ou sem Problem Details descarta a sessão", () => {
     expect(classifySubmitError(problem(401, "AUTHENTICATION_REQUIRED"), fallback)).toEqual({
       kind: "unauthorized",
     });
@@ -149,7 +149,7 @@ describe("classifySubmitError", () => {
     ["500", problem(500, "INTERNAL_ERROR")],
     ["403", problem(403, "IDENTITY_CONTEXT_UNAVAILABLE")],
     ["rede", new TypeError("Network request failed")],
-  ])("%s mantem a chave e nao expoe detalhe tecnico", (_, error) => {
+  ])("%s mantém a chave e não expoe detalhe tecnico", (_, error) => {
     const result = classifySubmitError(error, fallback);
     expect(result).toMatchObject({ kind: "message", rotateKey: false });
     expect(result.kind === "message" && result.message).not.toContain("English");

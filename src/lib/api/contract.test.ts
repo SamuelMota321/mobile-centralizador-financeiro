@@ -31,7 +31,7 @@ const snapshot = JSON.parse(
 
 function operation(path: string, method: string): Operation {
   const op = snapshot.paths[path]?.[method];
-  if (!op) throw new Error(`Operacao ausente no contrato: ${method.toUpperCase()} ${path}`);
+  if (!op) throw new Error(`Operação ausente no contrato: ${method.toUpperCase()} ${path}`);
   return op;
 }
 
@@ -86,7 +86,7 @@ describe("contrato OpenAPI de contas", () => {
     );
   });
 
-  it("a desativacao nao recebe corpo", () => {
+  it("a desativação não recebe corpo", () => {
     expect(operation("/api/v1/accounts/{accountId}/deactivate", "post").requestBody).toBeUndefined();
   });
 });
@@ -147,7 +147,7 @@ describe("contrato OpenAPI de Transactions", () => {
     );
   });
 
-  it("a transferencia responde com duas entradas", () => {
+  it("a transferência responde com duas entradas", () => {
     const transfer = component("TransferView").properties?.entries as JsonSchema & {
       minItems?: number;
       maxItems?: number;

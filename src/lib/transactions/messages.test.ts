@@ -22,7 +22,7 @@ describe("transactionsErrorMessage", () => {
     [409, "IDEMPOTENCY_KEY_REUSED"],
     [409, "IDEMPOTENCY_KEY_EXPIRED"],
     [409, "TRANSACTION_CATEGORIZATION_NOT_ALLOWED"],
-  ])("tem mensagem propria em pt-BR para %i %s", (status, code) => {
+  ])("tem mensagem própria em pt-BR para %i %s", (status, code) => {
     const message = transactionsErrorMessage(problem(status, code), "FALLBACK");
     expect(message).not.toBe("FALLBACK");
     expect(message).not.toContain("English");

@@ -2,7 +2,7 @@ const rawBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 if (!rawBaseUrl) {
   throw new Error(
-    "EXPO_PUBLIC_API_BASE_URL nao definido. Copie .env.example para .env e ajuste o valor.",
+    "EXPO_PUBLIC_API_BASE_URL não definido. Copie .env.example para .env e ajuste o valor.",
   );
 }
 

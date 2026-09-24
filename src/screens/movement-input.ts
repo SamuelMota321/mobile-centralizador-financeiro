@@ -15,8 +15,8 @@ export type FieldErrors = Record<string, string>;
 
 type Parsed<T> = { ok: true; input: T } | { ok: false; fieldErrors: FieldErrors };
 
-const AMOUNT_MESSAGE = "Informe um valor maior que zero, com ate duas casas decimais.";
-const DATE_MESSAGE = "Informe uma data valida no formato DD/MM/AAAA.";
+const AMOUNT_MESSAGE = "Informe um valor maior que zero, com até duas casas decimais.";
+const DATE_MESSAGE = "Informe uma data válida no formato DD/MM/AAAA.";
 
 // Mensagens do Zod para tipos/enums sao genericas e em ingles; o backend responde
 // `errors[].path` com o nome do campo e mensagem tecnica em ingles.
@@ -27,7 +27,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   type: "Escolha receita ou despesa.",
   amount: AMOUNT_MESSAGE,
   occurredOn: DATE_MESSAGE,
-  description: "Revise a descricao.",
+  description: "Revise a descrição.",
 };
 
 export interface MovementFields {
@@ -76,7 +76,7 @@ function parseWith<T>(
       fieldErrors[field] =
         issue.code === "custom" && field !== "occurredOn"
           ? `${issue.message}.`
-          : (FIELD_MESSAGES[field] ?? "Valor invalido.");
+          : (FIELD_MESSAGES[field] ?? "Valor inválido.");
     }
   }
   if (amount === null) fieldErrors.amount = AMOUNT_MESSAGE;

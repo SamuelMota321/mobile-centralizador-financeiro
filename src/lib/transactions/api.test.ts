@@ -60,7 +60,7 @@ afterEach(() => {
 describe("createTransaction", () => {
   const input = { accountId: ACCOUNT_A, type: "expense" as const, amount: "42.50", occurredOn: "2026-09-20", description: "  Mercado   do  mes " };
 
-  it("envia Idempotency-Key, bearer e descricao normalizada", async () => {
+  it("envia Idempotency-Key, bearer e descrição normalizada", async () => {
     const fetchMock = stubFetch(201, view());
     await createTransaction(input, { idempotencyKey: KEY });
     const call = lastCall(fetchMock);
@@ -71,13 +71,13 @@ describe("createTransaction", () => {
     expect(call.body).toEqual({ ...input, description: "Mercado do mes" });
   });
 
-  it("envia descricao vazia como null", async () => {
+  it("envia descrição vazia como null", async () => {
     const fetchMock = stubFetch(201, view({ description: null }));
     await createTransaction({ ...input, description: "   " }, { idempotencyKey: KEY });
     expect(lastCall(fetchMock).body.description).toBeNull();
   });
 
-  it("recusa chave que nao e UUID e valores invalidos sem chamar a API", async () => {
+  it("recusa chave que não é UUID e valores inválidos sem chamar a API", async () => {
     const fetchMock = stubFetch(201, view());
     await expect(createTransaction(input, { idempotencyKey: "abc" })).rejects.toThrow();
     for (const amount of ["0.00", "-1.00", "10", "10.5", "1,00"]) {
@@ -89,7 +89,7 @@ describe("createTransaction", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("aceita resposta ja categorizada por regra", async () => {
+  it("aceita resposta já categorizada por regra", async () => {
     stubFetch(201, view({ categoryId: ACCOUNT_B, categorizationStatus: "categorized", categorizationSource: "rule" }));
     const result = await createTransaction(input, { idempotencyKey: KEY });
     expect(result.categorizationSource).toBe("rule");
@@ -127,7 +127,7 @@ describe("createTransfer", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("falha se a resposta nao tiver exatamente duas entradas", async () => {
+  it("falha se a resposta não tiver exatamente duas entradas", async () => {
     stubFetch(201, { entries: [view()] });
     await expect(createTransfer(input, { idempotencyKey: KEY })).rejects.toThrow();
   });
@@ -162,7 +162,7 @@ describe("updateTransactionCategory", () => {
     expect(call.body).toEqual(update);
   });
 
-  it("recusa as duas formas juntas e status nao permitido", async () => {
+  it("recusa as duas formas juntas e status não permitido", async () => {
     const fetchMock = stubFetch(200, view());
     await expect(
       updateTransactionCategory(TX_ID, { categoryId: ACCOUNT_B, categorizationStatus: "uncertain" } as never),

@@ -7,6 +7,8 @@ import {
   canCategorize,
   CATEGORY_FALLBACK_LABEL,
   categorizationLabel,
+  categorizationTone,
+  movementDirection,
   replaceItem,
   signedAmount,
   typeLabel,
@@ -40,7 +42,7 @@ describe("accountLabel", () => {
     );
   });
 
-  it("usa fallback neutro para conta ausente ou lista indisponivel", () => {
+  it("usa fallback neutro para conta ausente ou lista indisponível", () => {
     expect(accountLabel(ACCOUNT_ID, [])).toBe(ACCOUNT_FALLBACK_LABEL);
     expect(accountLabel(ACCOUNT_ID, null)).toBe(ACCOUNT_FALLBACK_LABEL);
   });
@@ -50,16 +52,16 @@ describe("typeLabel e signedAmount", () => {
   it.each([
     [{ type: "income", transferSide: null }, "Receita", "+ R$ 1.234,56"],
     [{ type: "expense", transferSide: null }, "Despesa", "\u2212 R$ 1.234,56"],
-    [{ type: "transfer", transferSide: "outgoing" }, "Transferencia entre contas — saida", "\u2212 R$ 1.234,56"],
-    [{ type: "transfer", transferSide: "incoming" }, "Transferencia entre contas — entrada", "+ R$ 1.234,56"],
+    [{ type: "transfer", transferSide: "outgoing" }, "Transferência entre contas — saída", "\u2212 R$ 1.234,56"],
+    [{ type: "transfer", transferSide: "incoming" }, "Transferência entre contas — entrada", "+ R$ 1.234,56"],
   ] as const)("%j", (transaction, label, amount) => {
     expect(typeLabel(transaction)).toBe(label);
     expect(signedAmount({ ...transaction, amount: "1234.56" }).text).toBe(amount);
   });
 
-  it("nunca usa vocabulario de operacao bancaria", () => {
+  it("nunca usa vocabulário de operação bancária", () => {
     const label = typeLabel({ type: "transfer", transferSide: "outgoing" }).toLowerCase();
-    for (const word of ["enviar", "pix", "pagar", "bancaria"]) {
+    for (const word of ["enviar", "pix", "pagar", "bancaria", "bancária"]) {
       expect(label).not.toContain(word);
     }
   });
@@ -71,11 +73,11 @@ describe("categorizationLabel", () => {
 
   it.each([
     ["unclassified", null, "Sem categoria"],
-    ["categorized", "manual", "Mercado · definida por voce"],
+    ["categorized", "manual", "Mercado · definida por você"],
     ["categorized", "rule", "Mercado · aplicada por regra"],
     ["uncertain", null, "Categoria incerta"],
-    ["unrecognized", null, "Nao reconhecida"],
-    ["not_applicable", null, "Nao se aplica"],
+    ["unrecognized", null, "Não reconhecida"],
+    ["not_applicable", null, "Não se aplica"],
   ] as const)("%s/%s", (categorizationStatus, categorizationSource, expected) => {
     const categoryId = categorizationStatus === "categorized" ? CATEGORY_ID : null;
     expect(
@@ -83,16 +85,16 @@ describe("categorizationLabel", () => {
     ).toBe(expected);
   });
 
-  it("mantem legivel a categoria arquivada", () => {
+  it("mantém legível a categoria arquivada", () => {
     expect(
       categorizationLabel(
         { categorizationStatus: "categorized", categorizationSource: "manual", categoryId: CATEGORY_ID },
         [{ id: CATEGORY_ID, name: "Mercado", status: "archived" }],
       ),
-    ).toBe("Mercado (arquivada) · definida por voce");
+    ).toBe("Mercado (arquivada) · definida por você");
   });
 
-  it("usa fallback neutro quando a categoria nao e encontrada", () => {
+  it("usa fallback neutro quando a categoria não é encontrada", () => {
     for (const list of [[], null]) {
       expect(
         categorizationLabel(
@@ -124,8 +126,26 @@ describe("replaceItem", () => {
 });
 
 describe("appendPage", () => {
-  it("acrescenta a pagina seguinte sem repetir itens deslocados", () => {
+  it("acrescenta a página seguinte sem repetir itens deslocados", () => {
     const result = appendPage([item("a"), item("b")], [item("b"), item("c")]);
     expect(result.map((entry) => entry.id)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("categorizationTone e movementDirection", () => {
+  it.each([
+    ["categorized", "positive"],
+    ["uncertain", "warning"],
+    ["unrecognized", "warning"],
+    ["unclassified", "neutral"],
+    ["not_applicable", "neutral"],
+  ] as const)("%s -> %s", (categorizationStatus, tone) => {
+    expect(categorizationTone({ categorizationStatus })).toBe(tone);
+  });
+
+  it("distingue entrada, saída e transferência", () => {
+    expect(movementDirection({ type: "income", transferSide: null })).toBe("in");
+    expect(movementDirection({ type: "expense", transferSide: null })).toBe("out");
+    expect(movementDirection({ type: "transfer", transferSide: "outgoing" })).toBe("transfer");
   });
 });

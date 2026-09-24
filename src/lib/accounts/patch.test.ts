@@ -64,7 +64,7 @@ describe("buildAccountPatch", () => {
     });
   });
 
-  it("envia null para remover a instituicao", () => {
+  it("envia null para remover a instituição", () => {
     expect(buildAccountPatch(original, { ...unchanged, institutionName: null })).toEqual({
       institutionName: null,
     });
