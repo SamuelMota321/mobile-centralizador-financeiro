@@ -36,13 +36,15 @@ export class ApiRequestError extends Error {
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  /** Enviada no header `Idempotency-Key` (POST de movimentacoes). */
+  idempotencyKey?: string;
 }
 
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { body, query, headers, ...rest } = options;
+  const { body, query, headers, idempotencyKey, ...rest } = options;
 
   const token = await tokenProvider();
   const finalHeaders = new Headers(headers);
@@ -52,6 +54,9 @@ export async function apiRequest<T>(
   }
   if (token) {
     finalHeaders.set("authorization", `Bearer ${token}`);
+  }
+  if (idempotencyKey) {
+    finalHeaders.set("idempotency-key", idempotencyKey);
   }
 
   const response = await fetch(`${apiBaseUrl}${path}${buildQuery(query)}`, {

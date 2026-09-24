@@ -33,6 +33,15 @@ export const PROBLEM_CODES = {
   accountNotFound: "ACCOUNT_NOT_FOUND",
   accountArchived: "ACCOUNT_ARCHIVED",
   connectedAccountReadOnly: "CONNECTED_ACCOUNT_READ_ONLY",
+  transactionNotFound: "TRANSACTION_NOT_FOUND",
+  transferAccountsMustDiffer: "TRANSFER_ACCOUNTS_MUST_DIFFER",
+  transactionCategorizationNotAllowed: "TRANSACTION_CATEGORIZATION_NOT_ALLOWED",
+  categoryNotFound: "CATEGORY_NOT_FOUND",
+  categoryArchived: "CATEGORY_ARCHIVED",
+  categoryRuleNotFound: "CATEGORY_RULE_NOT_FOUND",
+  categoryRuleConflict: "CATEGORY_RULE_CONFLICT",
+  idempotencyKeyReused: "IDEMPOTENCY_KEY_REUSED",
+  idempotencyKeyExpired: "IDEMPOTENCY_KEY_EXPIRED",
   internalError: "INTERNAL_ERROR",
 } as const;
 
