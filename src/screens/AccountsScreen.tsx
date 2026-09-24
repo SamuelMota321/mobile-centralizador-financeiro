@@ -21,6 +21,7 @@ import type { Account } from "../lib/accounts/types";
 import { theme } from "../theme";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 import { AccountFormScreen } from "./AccountFormScreen";
+import { type Section, SectionTabs } from "./SectionTabs";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -31,7 +32,7 @@ interface Notice {
   text: string;
 }
 
-export function AccountsScreen() {
+export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
   const { signOut, handleUnauthorized } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [state, setState] = useState<LoadState>("loading");
@@ -137,6 +138,7 @@ export function AccountsScreen() {
 
   return (
     <View style={styles.container}>
+      <SectionTabs current="contas" onNavigate={onNavigate} />
       <View style={styles.header}>
         <Text style={styles.title}>Suas contas</Text>
         <Pressable onPress={() => void signOut()} accessibilityRole="button">
