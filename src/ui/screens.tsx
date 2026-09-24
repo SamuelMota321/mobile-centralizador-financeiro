@@ -12,14 +12,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
 import { makeStyles, radius, type, useTheme } from "../theme";
 import { BrandLockup } from "./brand";
-import { IconAccounts, IconCategories, IconClose, IconMovements, IconSignOut } from "./icons";
+import {
+  IconAccounts,
+  IconCategories,
+  IconClose,
+  IconMovements,
+  IconRules,
+  IconSignOut,
+} from "./icons";
 
-export type Section = "movimentacoes" | "contas" | "categorias";
+export type Section = "movimentacoes" | "contas" | "categorias" | "regras";
 
 const TABS = [
   { section: "movimentacoes", label: "Movimentações", Icon: IconMovements },
   { section: "contas", label: "Contas", Icon: IconAccounts },
   { section: "categorias", label: "Categorias", Icon: IconCategories },
+  { section: "regras", label: "Regras", Icon: IconRules },
 ] as const;
 
 /**
@@ -93,7 +101,10 @@ export function AppScreen({
               <View style={[styles.tabIcon, selected && styles.tabIconSelected]}>
                 <Icon size={22} color={color} />
               </View>
-              <Text style={[styles.tabLabel, { color }, selected && styles.tabLabelSelected]}>
+              <Text
+                style={[styles.tabLabel, { color }, selected && styles.tabLabelSelected]}
+                numberOfLines={1}
+              >
                 {label}
               </Text>
             </Pressable>

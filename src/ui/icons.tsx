@@ -106,3 +106,11 @@ export const IconAlert = ({ size, color }: IconProps) => (
     <Path d="M12 9.5v4M12 16.5h.01" {...stroke(color)} />
   </Frame>
 );
+
+export const IconRules = ({ size, color }: IconProps) => (
+  <Frame size={size}>
+    <Path d="M4 6h9M4 12h6M4 18h9" {...stroke(color)} />
+    <Path d="m15.5 10.5 2.2 2.2 3.8-4.2" {...stroke(color)} />
+    <Path d="M16 18h4" {...stroke(color)} />
+  </Frame>
+);

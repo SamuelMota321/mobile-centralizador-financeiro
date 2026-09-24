@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { AccountsScreen } from "./src/screens/AccountsScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { MovementsScreen } from "./src/screens/MovementsScreen";
+import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
 import { useTheme } from "./src/theme";
 import type { Section } from "./src/ui/screens";
@@ -64,5 +65,7 @@ function Root() {
       return <AccountsScreen onNavigate={setSection} />;
     case "categorias":
       return <CategoriesScreen onNavigate={setSection} />;
+    case "regras":
+      return <RulesScreen onNavigate={setSection} />;
   }
 }

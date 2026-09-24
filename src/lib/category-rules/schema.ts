@@ -12,10 +12,17 @@ const conditionValueSchema = z
   .transform((value) => value.replace(/\s+/g, " ").trim())
   .pipe(z.string().min(1, "Informe o valor da condição"));
 
+/**
+ * A coluna do banco e INTEGER (32 bits) e o backend @ fa9b62a nao limita o maximo: acima
+ * disso o erro vira 500. O limite aqui evita o envio ate o Dev 1 validar no contrato.
+ */
+export const MAX_RULE_PRIORITY = 2_147_483_647;
+
 const prioritySchema = z
   .number("Informe a prioridade")
   .int("Use um número inteiro")
-  .min(0, "Use zero ou mais");
+  .min(0, "Use zero ou mais")
+  .max(MAX_RULE_PRIORITY, "Use no máximo 2.147.483.647");
 
 interface ConditionCandidate {
   conditionField?: (typeof RULE_CONDITION_FIELDS)[number];
