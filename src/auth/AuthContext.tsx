@@ -18,6 +18,7 @@ import {
   type StoredSession,
 } from "./session-store";
 import { setTokenProvider } from "../lib/api/http-client";
+import { SessionEpoch } from "./session-epoch";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -43,8 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const discovery = AuthSession.useAutoDiscovery(auth0Config.issuer);
+  const [epoch] = useState(() => new SessionEpoch());
+  const [sessionNumber, setSessionNumber] = useState(0);
 
   const applySession = useCallback((session: StoredSession | null) => {
+    // Toda troca de sessão invalida o que a sessão anterior ainda tinha em andamento.
+    setSessionNumber(epoch.advance());
     if (session && !isExpired(session)) {
       setTokenProvider(() => session.accessToken);
       setStatus("authenticated");
@@ -52,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setTokenProvider(() => undefined);
     setStatus("anonymous");
-  }, []);
+  }, [epoch]);
 
   useEffect(() => {
     let active = true;
@@ -138,10 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [applySession]);
 
+  /**
+   * Presa ao número da sessão em que foi criada: um 401 que chega depois de logout ou
+   * troca de usuário vem de uma tela antiga e não pode encerrar a sessão atual.
+   */
   const handleUnauthorized = useCallback(async () => {
+    if (!epoch.isCurrent(sessionNumber)) return;
     await clearSession();
     applySession(null);
-  }, [applySession]);
+  }, [applySession, epoch, sessionNumber]);
 
   const value = useMemo(
     () => ({ status, signIn, signOut, handleUnauthorized, signingIn, error }),
