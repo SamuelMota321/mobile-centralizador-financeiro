@@ -1,4 +1,4 @@
-// Alinhado a CategoryView, CreateCategory e UpdateCategory (@ backend fa9b62a).
+// Alinhado a CategoryView, CreateCategory e UpdateCategory (@ backend e95d2af).
 
 export type CategoryStatus = "active" | "archived";
 
@@ -22,8 +22,8 @@ export interface CategoryPage {
 
 /**
  * Corpo de POST /categories e PATCH /categories/{id}. O banco exige nome unico por tenant
- * (exato, com diferenca de maiusculas, incluindo arquivadas); o backend @ fa9b62a nao
- * mapeia a violacao e responde 500 — por isso os clientes verificam antes de enviar.
+ * (exato, com diferenca de maiusculas, incluindo arquivadas); a violacao volta como
+ * 409 CATEGORY_ALREADY_EXISTS (@ backend e95d2af).
  */
 export interface CategoryInput {
   name: string;

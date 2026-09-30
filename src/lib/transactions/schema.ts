@@ -6,7 +6,7 @@ import {
   UNCERTAIN_STATUSES,
 } from "./types";
 
-// Validacao de borda espelhando o OpenAPI (@ backend fa9b62a). O backend reaplica
+// Validacao de borda espelhando o OpenAPI (@ backend e95d2af). O backend reaplica
 // as regras de dominio (data real, valor dentro de numeric(19,2), conta ativa).
 
 /** Valor positivo com exatamente duas casas, igual ao pattern do contrato. */

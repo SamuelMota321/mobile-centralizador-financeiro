@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import { accountSchema } from "../accounts/schema";
 import { categoryPageSchema, categorySchema } from "../categories/schema";
-import { categoryRulePageSchema, categoryRuleSchema } from "../category-rules/schema";
+import {
+  categoryRulePageSchema,
+  categoryRuleSchema,
+  MAX_RULE_PRIORITY,
+} from "../category-rules/schema";
 import {
   OPERATORS_BY_FIELD,
   RULE_CONDITION_FIELDS,
@@ -372,6 +376,21 @@ describe("paridade de enums entre o snapshot e o cliente", () => {
       .flatMap((variant) => variant.properties?.categorizationStatus?.enum ?? [])
       .sort();
     expect(statuses).toEqual([...UNCERTAIN_STATUSES].sort());
+  });
+
+  it.each(["CreateCategoryRule", "UpdateCategoryRule", "CategoryRuleView"])(
+    "%s.priority tem o mesmo limite do cliente",
+    (component) => {
+      const priority = contractComponent(component).properties?.priority as
+        | (ContractSchema & { maximum?: number })
+        | undefined;
+      expect(priority?.maximum).toBe(MAX_RULE_PRIORITY);
+    },
+  );
+
+  it("desativar conta declara o 409 de conta usada por regra ativa", () => {
+    const responses = snapshot.paths["/api/v1/accounts/{accountId}/deactivate"].post.responses;
+    expect(Object.keys(responses)).toContain("409");
   });
 
   it("type e accountId só aceitam é igual a, como no domínio do backend", () => {

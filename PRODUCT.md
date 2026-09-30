@@ -40,7 +40,7 @@ Organiza dados manuais, OFX e Pluggy Sandbox sem se comportar como banco: não m
 
 ## Brand Commitments
 
-- Identidade definida no Style Guide 1.0 (`documentacao-centralizador-financeiro/style-guide.html`): princípios de segurança institucional, clareza progressiva e tranquilidade.
+- Identidade definida no Style Guide 1.0 (`documentacao-centralizador-financeiro/docs/design/style-guide.html`): princípios de segurança institucional, clareza progressiva e tranquilidade.
 - Nome "Coinciente" (Coin + consciente); símbolo de dois "C" concêntricos com ponto central (`src/ui/brand.tsx`). Não distorcer, contornar ou recolorir com cores de status.
 - Voz humana no tom e precisa no conteúdo: explica sem infantilizar, orienta sem aconselhar. Nunca promete rentabilidade, enriquecimento ou "inteligência".
 - Português do Brasil correto, com acentuação.

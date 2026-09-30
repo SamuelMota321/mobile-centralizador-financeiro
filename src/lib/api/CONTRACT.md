@@ -5,7 +5,7 @@ O contrato e propriedade do backend (`backend-centralizador-financeiro`), servid
 naquele repositorio.
 
 `openapi.snapshot.json` (nesta pasta) e uma copia de referencia do contrato
-em `backend @ fa9b62a`. Os tipos em `src/lib/accounts/types.ts` e os schemas em
+em `backend @ e95d2af`. Os tipos em `src/lib/accounts/types.ts` e os schemas em
 `src/lib/accounts/schema.ts` sao transcritos a mao e devem acompanhar esse snapshot.
 Este cliente nao compartilha fonte nem pacote com o cliente web.
 
@@ -37,11 +37,14 @@ Manutencao de contas: `ACCOUNT_NOT_FOUND` (404) e `ACCOUNT_ARCHIVED` (409) exibe
 mensagem, sem revelar se a conta existe em outro tenant; `CONNECTED_ACCOUNT_READ_ONLY` (409)
 bloqueia PATCH de conta conectada. O `detail` do backend (ingles) nunca e exibido: as mensagens
 por codigo e por campo (`errors[].path`) ficam em `src/lib/accounts/messages.ts`.
+`CATEGORY_RULE_CONFLICT` (409) na desativacao indica que a conta ainda e condicao de uma regra
+ativa: a mensagem orienta desativar ou remover a regra antes.
 
 ## Transactions (Sprint 2)
 
 Baseline registrado na fase 1 da Sprint 2 do Dev 2, verificado no codigo do backend em
-`fa9b62a`. Normativo: `especificacao-transactions.html` (docs); em divergencia, o cliente
+`fa9b62a` e atualizado para `e95d2af` (ver "Mudancas em e95d2af").
+Normativo: `especificacao-transactions.html` (docs); em divergencia, o cliente
 segue o OpenAPI e a divergencia fica registrada abaixo.
 
 ### Cobertura
@@ -82,7 +85,7 @@ utilitarios em `src/lib/money.ts`, `src/lib/civil-date.ts`, `src/lib/idempotency
   gera 409 `IDEMPOTENCY_KEY_REUSED`; apos 24h, 409 `IDEMPOTENCY_KEY_EXPIRED`.
 - Valor: positivo, ate 17 digitos inteiros. Descricao: espacos colapsados, vazia vira `null`,
   sem limite de tamanho. Data: civil real, futuras aceitas. Categoria: 1 a 100 caracteres,
-  nomes repetidos aceitos; renomear arquivada gera 400. Regra: comparacao de descricao ignora
+  nome repetido gera 409 `CATEGORY_ALREADY_EXISTS`; renomear arquivada gera 400. Regra: comparacao de descricao ignora
   caixa e espacos extras, mas nao acentos; `type` e `accountId` so aceitam `equals`.
 
 ### Erros
@@ -94,13 +97,28 @@ utilitarios em `src/lib/money.ts`, `src/lib/civil-date.ts`, `src/lib/idempotency
 | 401 / 403 | `AUTHENTICATION_REQUIRED` / `IDENTITY_CONTEXT_UNAVAILABLE` | sessao ou contexto de identidade |
 | 404 | `ACCOUNT_NOT_FOUND`, `TRANSACTION_NOT_FOUND`, `CATEGORY_NOT_FOUND`, `CATEGORY_RULE_NOT_FOUND` | inexistente ou de outro tenant |
 | 409 | `ACCOUNT_ARCHIVED`, `CATEGORY_ARCHIVED` | recurso arquivado |
-| 409 | `CATEGORY_RULE_CONFLICT` | operacao sobre regra removida |
+| 409 | `CATEGORY_RULE_CONFLICT` | operacao sobre regra removida; ou desativar conta que e condicao de regra ativa |
+| 409 | `CATEGORY_ALREADY_EXISTS` | nome de categoria repetido (exato, inclusive arquivada) |
 | 409 | `IDEMPOTENCY_KEY_REUSED`, `IDEMPOTENCY_KEY_EXPIRED` | chave recusada: gerar nova |
 | 409 | `TRANSACTION_CATEGORIZATION_NOT_ALLOWED` | categorizar transferencia ou estornada |
 | 500 | `INTERNAL_ERROR` | inclui reenvio concorrente da mesma chave em processamento: permitir nova tentativa |
 
 Mensagens pt-BR em `src/lib/transactions/messages.ts`; inexistente e arquivado compartilham
 a mesma mensagem.
+
+### Mudancas em e95d2af
+
+Correcoes do Dev 1 apos a auditoria da Sprint 2 (`auditorias/auditoria-sprint-2-dev-1.md`):
+
+- `priority` das regras ganhou `maximum: 2147483647`, o mesmo limite ja aplicado pelo cliente
+  (`MAX_RULE_PRIORITY`); `contract.test.ts` confere que os dois continuam iguais.
+- `POST /accounts/{id}/deactivate` recusa com 409 `CATEGORY_RULE_CONFLICT` quando uma regra
+  ativa usa a conta como condicao.
+- Nome de categoria repetido deixou de gerar 500 e passou a 409 `CATEGORY_ALREADY_EXISTS`,
+  exibido como erro do campo nome.
+
+Com isso, tres divergencias reportadas antes ficaram resolvidas: prioridade sem limite, regra
+aceitando conta arquivada e 500 no nome repetido.
 
 ### Divergencias reportadas ao Dev 1
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { MOVEMENT_TYPES } from "../transactions/types";
 import { OPERATORS_BY_FIELD, RULE_CONDITION_FIELDS, RULE_OPERATORS } from "./types";
 
-// Espelha o dominio do backend (@ backend fa9b62a): uma condicao por regra; `type`
+// Espelha o dominio do backend (@ backend e95d2af): uma condicao por regra; `type`
 // aceita income/expense e `accountId` um UUID, ambos somente com `equals`.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -13,8 +13,8 @@ const conditionValueSchema = z
   .pipe(z.string().min(1, "Informe o valor da condição"));
 
 /**
- * A coluna do banco e INTEGER (32 bits) e o backend @ fa9b62a nao limita o maximo: acima
- * disso o erro vira 500. O limite aqui evita o envio ate o Dev 1 validar no contrato.
+ * A coluna do banco e INTEGER (32 bits); o contrato (@ backend e95d2af) declara o mesmo
+ * `maximum`. O teste de contrato confere que os dois valores continuam iguais.
  */
 export const MAX_RULE_PRIORITY = 2_147_483_647;
 

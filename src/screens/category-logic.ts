@@ -14,8 +14,8 @@ export const DUPLICATE_NAME_MESSAGE =
 
 /**
  * Espelha o indice unico do banco (tenant_id, name): comparacao exata do nome ja
- * normalizado, diferenciando maiusculas e incluindo arquivadas. O backend @ fa9b62a
- * responde 500 para a violacao, por isso a tela verifica antes de enviar.
+ * normalizado, diferenciando maiusculas e incluindo arquivadas. A tela avisa antes de
+ * enviar; o backend (@ e95d2af) tambem recusa com 409 CATEGORY_ALREADY_EXISTS.
  */
 export function hasNameConflict(
   normalizedName: string,
@@ -60,6 +60,10 @@ export function classifyCategoryError(error: unknown, fallback: string): Categor
     ) {
       return { kind: "unavailable", message: transactionsErrorMessage(error, fallback) };
     }
+    // Nome repetido que escapou da checagem local (corrida entre dois envios).
+    if (error.code === PROBLEM_CODES.categoryAlreadyExists) {
+      return { kind: "field", message: DUPLICATE_NAME_MESSAGE };
+    }
     if (error.status === 400) {
       // 400 sem `errors[]` na renomeacao indica categoria arquivada (InvalidCategoryState).
       return (error.problem.errors ?? []).some((item) => item.path === "name")
@@ -73,11 +77,7 @@ export function classifyCategoryError(error: unknown, fallback: string): Categor
       return { kind: "message", message: transactionsErrorMessage(error, fallback) };
     }
   }
-  // Inclui o 500 do nome repetido por corrida entre dois envios.
-  return {
-    kind: "message",
-    message: `${fallback} Se já existe uma categoria com este nome, use outro. Tente de novo.`,
-  };
+  return { kind: "message", message: `${fallback} Tente de novo.` };
 }
 
 export type CategorizeFailure =

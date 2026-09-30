@@ -90,10 +90,16 @@ describe("classifyCategoryError", () => {
     });
   });
 
-  it("500 vira mensagem segura que cita nome repetido", () => {
+  it("409 CATEGORY_ALREADY_EXISTS (nome repetido por corrida) vira erro no campo", () => {
+    expect(classifyCategoryError(problem(409, "CATEGORY_ALREADY_EXISTS"), fallback)).toEqual({
+      kind: "field",
+      message: DUPLICATE_NAME_MESSAGE,
+    });
+  });
+
+  it("500 vira mensagem segura, sem culpar o nome nem mostrar o detalhe tecnico", () => {
     const result = classifyCategoryError(problem(500, "INTERNAL_ERROR"), fallback);
-    expect(result).toMatchObject({ kind: "message", message: expect.stringContaining("use outro") });
-    expect(result.kind === "message" && result.message).not.toContain("English");
+    expect(result).toEqual({ kind: "message", message: `${fallback} Tente de novo.` });
   });
 });
 
