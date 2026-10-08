@@ -10,7 +10,7 @@ import {
 // as regras de dominio (data real, valor dentro de numeric(19,2), conta ativa).
 
 /** Valor positivo com exatamente duas casas, igual ao pattern do contrato. */
-const AMOUNT = /^(?:0\.(?:0[1-9]|[1-9]\d)|[1-9]\d*\.\d{2})$/;
+export const AMOUNT = /^(?:0\.(?:0[1-9]|[1-9]\d)|[1-9]\d*\.\d{2})$/;
 
 const amountSchema = z.string().regex(AMOUNT, "Informe um valor maior que zero");
 

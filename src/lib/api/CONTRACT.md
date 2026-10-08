@@ -163,3 +163,74 @@ Enquanto nao houver decisao, o acesso usa `src/lib/api/http-client.ts` + tipos a
 | `@hey-api/openapi-ts` | tipos + SDK de funcoes | plugin de zod opcional |
 | `orval` | hooks + zod | util se adotarmos react-query |
 | `openapi-generator` (typescript-fetch) | cliente completo | JVM; mais pesado |
+
+## Sprint 3 (planejado)
+
+Baseline da Fase 1 do Dev 2 (2026-10-07), atualizado em 2026-10-08 com o contrato backend S3-01
+do Dev 1 (`docs/planejamento/sprint-03/contrato-backend-s3-01.html`, docs @ `f851384`). O backend
+em `9887206` tem a fundacao de OFX (dominio, parser, persistencia), mas nenhum controller: as
+rotas abaixo ainda nao estao no OpenAPI nem em `openapi.snapshot.json`. O cliente usa este
+contrato com dados ficticios ate o Dev 1 publicar os handlers (S3-02 e S3-05).
+
+### Operacoes (contrato S3-01, ainda fora do OpenAPI)
+
+| Operacao | Cliente | Status |
+|---|---|---|
+| `POST /api/v1/ingestions/ofx/previews` (multipart, campo `file`) + `Idempotency-Key` | `createOfxPreview()` | rota Approved; resposta Proposed |
+| `POST /api/v1/ingestions/{importRunId}/confirmations` + `Idempotency-Key` | `confirmImport()` | rota Approved; resposta Proposed |
+| `GET /api/v1/ingestions/{importRunId}` | `getImportRun()` | rota Approved; resposta Proposed |
+| `POST /api/v1/connections/pluggy/sessions` | — (fase 4) | rota Approved; campos OPEN |
+| `POST /api/v1/connections/pluggy/completions` + `Idempotency-Key` | — (fase 4) | rota Approved; campos OPEN |
+| `GET /api/v1/connections/{connectionId}` | — (fase 4) | rota Approved; campos OPEN |
+| `PUT /api/v1/connections/{connectionId}/accounts/{providerAccountId}/mapping` | — (fase 4) | rota Approved; campos OPEN |
+| `POST /api/v1/connections/{connectionId}/disconnect` | — (fase 4) | rota Approved |
+
+Modulo: `src/lib/ingestions/`. Os nomes dos campos da resposta (Proposed) seguem o dominio do
+backend @ `9887206` (`ImportRunSnapshot` e `IngestionItemState`); `items` e o nome assumido para
+as linhas da previa e do resultado. Os testes usam dados ficticios marcados como Proposed;
+`contract.test.ts` nao cobre estas rotas enquanto elas nao estiverem no snapshot.
+
+### Decidido no contrato S3-01
+
+- OFX 1.x SGML e 2.x XML, em ASCII ou UTF-8; PDF recusado. Limite do backend: 10 MiB.
+- Conta de destino escolhida na confirmacao (`destinationAccountId`, conta ativa do tenant).
+- Duplicado: FITID dentro da conta de destino; sem FITID, data/valor/descricao, com o aviso
+  `external_id_missing` e sem bloquear a confirmacao. Duplicados sao sempre ignorados.
+- Previa: 201 pronta ou 202 na fila. Confirmacao: 200 concluida ou 202 na fila. O limiar numerico
+  de assincronia ainda nao foi medido (Dev 1).
+- Estados da importacao: `preview_ready`, `awaiting_account_mapping`, `queued`, `processing`,
+  `completed`, `completed_with_errors`, `failed`, `expired`.
+- Pluggy: conexao `pending_authorization`, `connected`, `partially_available`, `expired`,
+  `revoked`, `disconnected`; consentimento `granted`, `expired`, `revoked`. Desconectar para a
+  coleta e mantem as contas e movimentacoes ja importadas.
+- Erros por status: 400, 401, 403, 404, 409 (estado invalido ou idempotencia), 413, 415, 422 e 503.
+
+### Pendente com o Dev 1 (levantado em 2026-10-08)
+
+1. 10 MiB nao passa pela Vercel no web; o mobile chama o backend direto e usa os 10 MiB.
+2. Duplicados so aparecem no resultado: a conta e escolhida depois da previa e o dominio deixa
+   `isDuplicate` nulo na previa.
+3. Valores de `code` do Problem Details para ingestions e connections.
+4. Nomes dos campos da resposta (usados os do dominio, Proposed).
+5. `Idempotency-Key` na previa: o cliente envia; a tabela do contrato so a exige na confirmacao.
+6. Prazo de validade da previa (`expired` existe, sem campo como `expiresAt`).
+7. Campos de `sessions` e `completions` do Pluggy.
+
+Tambem em aberto: regra de conta "correspondente" no Pluggy (Dev 3) e credenciais do Sandbox.
+
+### Decisoes do cliente
+
+- O app envia o arquivo direto ao backend com o token, sem servidor intermediario.
+- `apiRequest()` repassa `FormData` sem `JSON.stringify` e sem `content-type` (o React Native
+  define o boundary); corpos JSON nao mudam. O arquivo entra no `FormData` como
+  `{ uri, name, type }`, o formato que o React Native aceita.
+- Validacao local do arquivo (`checkOfxFile()`): vazio, PDF e acima de 10 MiB. E so ajuda de uso;
+  quem decide e o backend.
+- Erros: `ingestionErrorMessage()` traduz primeiro os codigos ja conhecidos (idempotencia, sessao,
+  conta) e depois o status HTTP, ate os `code` serem publicados. O `detail` nunca e exibido.
+- Importacao e conexao abrem como `FormScreen` a partir de `AccountsScreen` (fases 3 e 4), sem
+  aba nova em `Section` (`src/ui/screens.tsx`).
+- Dependencias aprovadas, ainda nao instaladas: `expo-document-picker@57.0.3` (fase 3) e
+  `react-native-pluggy-connect@1.6.0` (fase 4). Risco: o retorno do OAuth pelo scheme
+  `coinciente` so e testavel de ponta a ponta em development build; no Expo Go, apenas conectores
+  Sandbox sem OAuth real (ex.: "Pluggy Bank").
