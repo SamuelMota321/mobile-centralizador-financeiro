@@ -10,16 +10,18 @@ function problem(status: number, code: string) {
 }
 
 describe("ingestionErrorMessage", () => {
-  it("traduz pelo status enquanto os códigos não são publicados", () => {
-    expect(ingestionErrorMessage(problem(413, "CODIGO_FICTICIO"), FALLBACK)).toMatch(/limite de tamanho/);
-    expect(ingestionErrorMessage(problem(415, "CODIGO_FICTICIO"), FALLBACK)).toMatch(/PDF não é aceito/);
-    expect(ingestionErrorMessage(problem(422, "CODIGO_FICTICIO"), FALLBACK)).toMatch(/Não foi possível ler/);
-    expect(ingestionErrorMessage(problem(404, "CODIGO_FICTICIO"), FALLBACK)).toMatch(/não foi encontrada/);
+  it("traduz INVALID_REQUEST pelo status, como o backend distingue os casos", () => {
+    expect(ingestionErrorMessage(problem(413, "INVALID_REQUEST"), FALLBACK)).toMatch(/limite de tamanho/);
+    expect(ingestionErrorMessage(problem(415, "INVALID_REQUEST"), FALLBACK)).toMatch(/PDF não é aceito/);
+    expect(ingestionErrorMessage(problem(422, "INVALID_REQUEST"), FALLBACK)).toMatch(/Não foi possível ler/);
+    expect(ingestionErrorMessage(problem(404, "INVALID_REQUEST"), FALLBACK)).toMatch(/não foi encontrada/);
+    expect(ingestionErrorMessage(problem(409, "INVALID_REQUEST"), FALLBACK)).toMatch(/já foi confirmada/);
+    expect(ingestionErrorMessage(problem(503, "INTERNAL_ERROR"), FALLBACK)).toMatch(/indisponível no momento/);
   });
 
-  it("dá prioridade aos códigos conhecidos sobre o status", () => {
+  it("dá prioridade aos códigos específicos sobre o status", () => {
     expect(ingestionErrorMessage(problem(409, "IDEMPOTENCY_KEY_REUSED"), FALLBACK)).toMatch(/dados mudaram/);
-    expect(ingestionErrorMessage(problem(409, "CODIGO_FICTICIO"), FALLBACK)).toMatch(/já foi confirmada/);
+    expect(ingestionErrorMessage(problem(409, "ACCOUNT_ARCHIVED"), FALLBACK)).toMatch(/conta escolhida/);
     expect(ingestionErrorMessage(problem(404, "ACCOUNT_NOT_FOUND"), FALLBACK)).toMatch(/conta escolhida/);
   });
 

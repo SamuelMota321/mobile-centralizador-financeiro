@@ -5,7 +5,7 @@ import { idempotencyKeySchema } from "../transactions/schema";
 import { confirmImportInputSchema, importRunSchema } from "./schema";
 import type { ConfirmImportInput, ImportRun } from "./types";
 
-// Rotas do contrato S3-01 do Dev 1; ainda nao publicadas no OpenAPI (backend @ 9887206).
+// Rotas do OpenAPI do backend (@ 2c416cd). Previa e confirmacao exigem Idempotency-Key.
 
 /** Operacoes que criam ou iniciam uma importacao exigem Idempotency-Key. */
 export interface IngestionWriteOptions {
@@ -19,18 +19,27 @@ export interface OfxFileAsset {
   mimeType?: string | null;
 }
 
+/** A conta vai junto com o arquivo: a previa ja calcula os duplicados para ela. */
+export interface OfxPreviewInput {
+  file: OfxFileAsset;
+  destinationAccountId: string;
+}
+
 const uuidSchema = z.uuid();
 
-/** POST /api/v1/ingestions/ofx/previews — 201 com a previa pronta ou 202 na fila. */
+/** POST /api/v1/ingestions/ofx/previews — 201 com a previa pronta. */
 export async function createOfxPreview(
-  file: OfxFileAsset,
+  input: OfxPreviewInput,
   options: IngestionWriteOptions,
 ): Promise<ImportRun> {
+  const destinationAccountId = uuidSchema.parse(input.destinationAccountId);
   const idempotencyKey = idempotencyKeySchema.parse(options.idempotencyKey);
+  const { file } = input;
   const body = new FormData();
   // `{ uri, name, type }` e o formato de arquivo que o FormData do React Native aceita.
   const part = { uri: file.uri, name: file.name, ...(file.mimeType ? { type: file.mimeType } : {}) };
   body.append("file", part as unknown as Blob);
+  body.append("destinationAccountId", destinationAccountId);
   try {
     const raw = await apiRequest<unknown>("/ingestions/ofx/previews", {
       method: "POST",
@@ -43,7 +52,7 @@ export async function createOfxPreview(
   }
 }
 
-/** POST /api/v1/ingestions/{importRunId}/confirmations — 200 concluida ou 202 na fila. */
+/** POST /api/v1/ingestions/{importRunId}/confirmations — 200 com o resultado. */
 export async function confirmImport(
   importRunId: string,
   input: ConfirmImportInput,

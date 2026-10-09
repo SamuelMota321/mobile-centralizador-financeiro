@@ -34,16 +34,19 @@ beforeEach(() => {
 });
 
 describe("createOfxPreview", () => {
-  it("envia o arquivo no campo file no formato do React Native, com Idempotency-Key", async () => {
+  const input = { file: asset, destinationAccountId: DESTINATION_ACCOUNT_ID };
+
+  it("envia arquivo no formato do React Native e conta no multipart, com Idempotency-Key", async () => {
     const append = vi.spyOn(FormData.prototype, "append");
     const fetchMock = stubFetch(201, previewRun());
-    const run = await createOfxPreview(asset, { idempotencyKey: KEY });
+    const run = await createOfxPreview(input, { idempotencyKey: KEY });
 
     expect(append).toHaveBeenCalledWith("file", {
       uri: "file:///cache/extrato.ofx",
       name: "extrato.ofx",
       type: "application/x-ofx",
     });
+    expect(append).toHaveBeenCalledWith("destinationAccountId", DESTINATION_ACCOUNT_ID);
     const call = lastCall(fetchMock);
     expect(call.url).toBe(`${BASE}/ingestions/ofx/previews`);
     expect(call.init.method).toBe("POST");
@@ -51,28 +54,33 @@ describe("createOfxPreview", () => {
     expect(call.headers.get("authorization")).toBe("Bearer token-ficticio");
     expect(call.headers.get("idempotency-key")).toBe(KEY);
     expect(call.headers.has("content-type")).toBe(false);
-    expect(run.status).toBe("preview_ready");
+    expect(run.items.some((item) => item.isDuplicate)).toBe(true);
   });
 
   it("omite o tipo quando o seletor não informa", async () => {
     const append = vi.spyOn(FormData.prototype, "append");
-    stubFetch(202, previewRun({ status: "queued", items: [], totalItems: 0 }));
-    const run = await createOfxPreview({ uri: asset.uri, name: asset.name }, { idempotencyKey: KEY });
+    stubFetch(201, previewRun());
+    await createOfxPreview(
+      { file: { uri: asset.uri, name: asset.name }, destinationAccountId: DESTINATION_ACCOUNT_ID },
+      { idempotencyKey: KEY },
+    );
     expect(append).toHaveBeenCalledWith("file", { uri: asset.uri, name: asset.name });
-    expect(run.status).toBe("queued");
   });
 
-  it("recusa chave inválida antes de chamar o backend", async () => {
+  it("recusa conta ou chave inválidas antes de chamar o backend", async () => {
     const fetchMock = stubFetch(201, previewRun());
-    await expect(createOfxPreview(asset, { idempotencyKey: "x" })).rejects.toThrow();
+    await expect(
+      createOfxPreview({ file: asset, destinationAccountId: "conta" }, { idempotencyKey: KEY }),
+    ).rejects.toThrow();
+    await expect(createOfxPreview(input, { idempotencyKey: "x" })).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("converte o erro em ProblemDetailsError", async () => {
-    stubFetch(422, problemBody(422, "CODIGO_FICTICIO"));
-    const error = await createOfxPreview(asset, { idempotencyKey: KEY }).catch((e: unknown) => e);
+    stubFetch(422, problemBody(422, "INVALID_REQUEST"));
+    const error = await createOfxPreview(input, { idempotencyKey: KEY }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ProblemDetailsError);
-    expect(error).toMatchObject({ status: 422 });
+    expect(error).toMatchObject({ status: 422, code: "INVALID_REQUEST" });
   });
 });
 

@@ -1,8 +1,9 @@
 import { PROBLEM_CODES, ProblemDetailsError } from "../api/errors";
 import { ApiRequestError } from "../api/http-client";
 
-// O contrato S3-01 lista so os status HTTP de ingestions; os `code` ainda nao foram publicados.
-// Ate la: primeiro os codigos ja conhecidos, depois o status. O `detail` nunca e exibido.
+// O backend (@ 2c416cd) responde erros de arquivo e de estado como INVALID_REQUEST, e o status
+// distingue o caso (413, 415, 422, 409, 404). Por isso: primeiro os codigos especificos,
+// depois o status. O `detail` nunca e exibido.
 
 const ACCOUNT_UNAVAILABLE = "A conta escolhida não foi encontrada ou não está mais disponível.";
 
@@ -24,6 +25,7 @@ const MESSAGES_BY_STATUS: Record<number, string> = {
   413: "O arquivo passa do limite de tamanho. Exporte um período menor no banco.",
   415: "Formato não aceito. Envie o extrato no formato OFX (PDF não é aceito).",
   422: "Não foi possível ler este OFX. Confira se é o extrato exportado pelo banco.",
+  503: "O serviço de importação está indisponível no momento. Tente novamente em alguns minutos.",
 };
 
 export function ingestionErrorMessage(error: unknown, fallback: string): string {

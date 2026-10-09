@@ -1,11 +1,10 @@
 import type { MovementType } from "../transactions/types";
 
-// Estados aprovados no contrato S3-01 do Dev 1 (docs @ f851384). As rotas ainda nao estao no
-// OpenAPI; os nomes dos campos sao Proposed, tirados do dominio do backend @ 9887206.
+// Alinhado a POST /ingestions/ofx/previews, POST /ingestions/{id}/confirmations e
+// GET /ingestions/{id} do OpenAPI do backend (@ 2c416cd). Schemas inline; transcrito a mao.
 
 export const IMPORT_RUN_STATUSES = [
   "preview_ready",
-  "awaiting_account_mapping",
   "queued",
   "processing",
   "completed",
@@ -23,9 +22,14 @@ export const INGESTION_ITEM_STATUSES = [
 ] as const;
 export type IngestionItemStatus = (typeof INGESTION_ITEM_STATUSES)[number];
 
-/** Linha sem FITID: a deduplicacao usa data, valor e descricao, e a previa avisa. */
-export const OFX_WARNINGS = ["external_id_missing"] as const;
-export type OfxWarning = (typeof OFX_WARNINGS)[number];
+export const OFX_VARIANTS = ["ofx_1_sgml", "ofx_2_xml"] as const;
+export type OfxVariant = (typeof OFX_VARIANTS)[number];
+
+/**
+ * Aviso conhecido: linha sem FITID, deduplicada por data, valor e descricao. O contrato nao
+ * fecha a lista de avisos, entao a tela trata este e ignora os desconhecidos.
+ */
+export const EXTERNAL_ID_MISSING = "external_id_missing";
 
 export interface IngestionItem {
   ordinal: number;
@@ -37,19 +41,27 @@ export interface IngestionItem {
   occurredOn: string;
   description: string | null;
   status: IngestionItemStatus;
-  warnings: OfxWarning[];
+  /** Calculado para a conta de destino informada junto com o arquivo. */
+  isDuplicate: boolean;
+  warnings: string[];
   errorCode: string | null;
 }
 
 export interface ImportRun {
   id: string;
   status: ImportRunStatus;
-  /** Nula ate a confirmacao: a conta de destino e escolhida ao confirmar. */
-  destinationAccountId: string | null;
+  destinationAccountId: string;
+  variant: OfxVariant;
+  fileSizeBytes: number;
   totalItems: number;
   importedItems: number;
   ignoredItems: number;
   failedItems: number;
+  terminalAt: string | null;
+  /** Fim da retencao dos metadados (90 dias), nao a validade da previa. */
+  retentionExpiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
   items: IngestionItem[];
 }
 

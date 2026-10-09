@@ -19,6 +19,9 @@ import {
   transferSchema,
 } from "../transactions/schema";
 import { CATEGORIZATION_STATUSES, MOVEMENT_TYPES, UNCERTAIN_STATUSES } from "../transactions/types";
+import { previewRun, resultRun } from "../ingestions/fixtures";
+import { confirmImportInputSchema, importRunSchema, ingestionItemSchema } from "../ingestions/schema";
+import { IMPORT_RUN_STATUSES, INGESTION_ITEM_STATUSES, OFX_VARIANTS } from "../ingestions/types";
 
 // Verifica o cliente contra o snapshot versionado do OpenAPI do backend: ao atualizar o
 // snapshot, qualquer mudanca incompativel nas operacoes consumidas quebra este teste.
@@ -396,5 +399,66 @@ describe("paridade de enums entre o snapshot e o cliente", () => {
   it("type e accountId só aceitam é igual a, como no domínio do backend", () => {
     expect(OPERATORS_BY_FIELD.type).toEqual(["equals"]);
     expect(OPERATORS_BY_FIELD.accountId).toEqual(["equals"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ingestions (OFX): schemas inline no OpenAPI (@ backend 2c416cd).
+
+describe("contrato OpenAPI de Ingestions", () => {
+  const preview = operation("/api/v1/ingestions/ofx/previews", "post");
+  const confirm = operation("/api/v1/ingestions/{importRunId}/confirmations", "post");
+  const status = operation("/api/v1/ingestions/{importRunId}", "get");
+  const sorted = (values?: unknown[]) => [...(values ?? [])].sort();
+  const requiresIdempotencyKey = (op: Operation) =>
+    op.parameters?.some((p) => p.in === "header" && p.name === "Idempotency-Key" && p.required) ?? false;
+
+  it("as três operações exigem bearer Auth0", () => {
+    for (const op of [preview, confirm, status]) expect(op.security).toEqual([{ auth0: [] }]);
+  });
+
+  it("prévia e confirmação exigem Idempotency-Key; a consulta não", () => {
+    expect(requiresIdempotencyKey(preview)).toBe(true);
+    expect(requiresIdempotencyKey(confirm)).toBe(true);
+    expect(requiresIdempotencyKey(status)).toBe(false);
+  });
+
+  it("a prévia recebe multipart com exatamente file e destinationAccountId", () => {
+    const body = preview.requestBody?.content["multipart/form-data"]?.schema;
+    expect(sorted(body?.required)).toEqual(["destinationAccountId", "file"]);
+    expect(Object.keys(body?.properties ?? {}).sort()).toEqual(["destinationAccountId", "file"]);
+  });
+
+  it("a confirmação recebe os campos de confirmImportInputSchema", () => {
+    const body = confirm.requestBody?.content["application/json"]?.schema;
+    expect(Object.keys(body?.properties ?? {}).sort()).toEqual(Object.keys(confirmImportInputSchema.shape).sort());
+    expect(body?.required).toEqual(["destinationAccountId"]);
+  });
+
+  it.each([
+    ["prévia", preview, "201"],
+    ["confirmação", confirm, "200"],
+    ["consulta", status, "200"],
+  ] as [string, Operation, string][])("a resposta da %s tem exatamente os campos do cliente", (_name, op, code) => {
+    const run = jsonSchema(op, code);
+    expect(sorted(run.required)).toEqual(Object.keys(importRunSchema.shape).sort());
+    expect(sorted(run.properties?.items?.items?.required)).toEqual(Object.keys(ingestionItemSchema.shape).sort());
+  });
+
+  it.each([
+    ["prévia", previewRun()],
+    ["resultado", resultRun()],
+  ])("o ImportRun de %s é válido no contrato e no cliente", (_name, fixture) => {
+    expect(violations(jsonSchema(status, "200") as ContractSchema, fixture)).toEqual([]);
+    expect(importRunSchema.safeParse(fixture).success).toBe(true);
+  });
+
+  it("os enums do ImportRun e do item são os mesmos do cliente", () => {
+    const run = jsonSchema(status, "200") as ContractSchema;
+    const item = run.properties?.items?.items;
+    expect(sorted(run.properties?.status?.enum)).toEqual([...IMPORT_RUN_STATUSES].sort());
+    expect(sorted(run.properties?.variant?.enum)).toEqual([...OFX_VARIANTS].sort());
+    expect(sorted(item?.properties?.status?.enum)).toEqual([...INGESTION_ITEM_STATUSES].sort());
+    expect(sorted(item?.properties?.type?.enum)).toEqual([...MOVEMENT_TYPES].sort());
   });
 });
