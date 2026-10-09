@@ -17,11 +17,16 @@ import { IconAccounts, IconPlus } from "../ui/icons";
 import { AppScreen, type Section, useListStyles } from "../ui/screens";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 import { AccountFormScreen } from "./AccountFormScreen";
+import { OfxImportScreen } from "./OfxImportScreen";
 import { useForegroundRefresh } from "./use-foreground-refresh";
 
 type LoadState = "loading" | "ready" | "error";
 
-type Mode = { kind: "list" } | { kind: "create" } | { kind: "edit"; account: Account };
+type Mode =
+  | { kind: "list" }
+  | { kind: "create" }
+  | { kind: "edit"; account: Account }
+  | { kind: "import" };
 
 interface NoticeState {
   tone: NoticeTone;
@@ -115,13 +120,17 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
   );
 
   const finishForm = useCallback(
-    (message: string) => {
+    (message: string, tone: NoticeTone = "success") => {
       setMode({ kind: "list" });
-      setNotice({ tone: "success", text: message });
+      setNotice({ tone, text: message });
       void load();
     },
     [load],
   );
+
+  if (mode.kind === "import") {
+    return <OfxImportScreen onCancel={() => setMode({ kind: "list" })} onDone={finishForm} />;
+  }
 
   if (mode.kind !== "list") {
     return (
@@ -148,11 +157,20 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
       subtitle={subtitle}
       footer={
         state === "ready" ? (
-          <Button
-            label="Nova conta"
-            onPress={() => setMode({ kind: "create" })}
-            icon={(color) => <IconPlus size={20} color={color} />}
-          />
+          <>
+            <Button
+              label="Nova conta"
+              onPress={() => setMode({ kind: "create" })}
+              icon={(color) => <IconPlus size={20} color={color} />}
+            />
+            {accounts.length > 0 ? (
+              <Button
+                label="Importar extrato OFX"
+                variant="text"
+                onPress={() => setMode({ kind: "import" })}
+              />
+            ) : null}
+          </>
         ) : null
       }
     >
