@@ -19,6 +19,7 @@ import { accountChoices, selectedAccount } from "./movement-form-helpers";
 import { accountLabel, type AccountOption } from "./movement-presentation";
 import {
   classifyImportError,
+  confirmKeyAfterFailure,
   countLabel,
   FAILED_ITEM_MESSAGE,
   itemAmount,
@@ -158,7 +159,7 @@ export function OfxImportScreen({ onCancel, onDone }: Props) {
           return;
         }
         setFormError({ text: failure.message, restart: failure.restart });
-        if (failure.rotateKey) setFlow({ ...current, confirmKey: newIdempotencyKey() });
+        setFlow({ ...current, confirmKey: confirmKeyAfterFailure(current.confirmKey, failure) });
       }
     });
   }

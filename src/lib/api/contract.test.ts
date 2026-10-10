@@ -22,6 +22,9 @@ import { CATEGORIZATION_STATUSES, MOVEMENT_TYPES, UNCERTAIN_STATUSES } from "../
 import { previewRun, resultRun } from "../ingestions/fixtures";
 import { confirmImportInputSchema, importRunSchema, ingestionItemSchema } from "../ingestions/schema";
 import { IMPORT_RUN_STATUSES, INGESTION_ITEM_STATUSES, OFX_VARIANTS } from "../ingestions/types";
+import { connectionView, pendingConnectionView, sessionView } from "../connections/fixtures";
+import { completeConnectionInputSchema, connectionSchema, consentSchema, pluggySessionSchema } from "../connections/schema";
+import { CONNECTION_STATUSES, CONSENT_STATUSES } from "../connections/types";
 
 // Verifica o cliente contra o snapshot versionado do OpenAPI do backend: ao atualizar o
 // snapshot, qualquer mudanca incompativel nas operacoes consumidas quebra este teste.
@@ -447,7 +450,12 @@ describe("contrato OpenAPI de Ingestions", () => {
 
   it.each([
     ["prévia", previewRun()],
-    ["resultado", resultRun()],
+    ["resultado parcial", resultRun()],
+    ["prévia expirada", previewRun({ status: "expired", terminalAt: "2026-10-10T12:00:00.000Z" })],
+    [
+      "falha",
+      resultRun({ status: "failed", totalItems: 0, importedItems: 0, ignoredItems: 0, failedItems: 0, items: [] }),
+    ],
   ])("o ImportRun de %s é válido no contrato e no cliente", (_name, fixture) => {
     expect(violations(jsonSchema(status, "200") as ContractSchema, fixture)).toEqual([]);
     expect(importRunSchema.safeParse(fixture).success).toBe(true);
@@ -460,5 +468,79 @@ describe("contrato OpenAPI de Ingestions", () => {
     expect(sorted(run.properties?.variant?.enum)).toEqual([...OFX_VARIANTS].sort());
     expect(sorted(item?.properties?.status?.enum)).toEqual([...INGESTION_ITEM_STATUSES].sort());
     expect(sorted(item?.properties?.type?.enum)).toEqual([...MOVEMENT_TYPES].sort());
+  });
+});
+
+// Connections (Pluggy): schemas inline no OpenAPI (@ backend 605cb07).
+
+describe("contrato OpenAPI de Connections", () => {
+  const session = operation("/api/v1/connections/pluggy/sessions", "post");
+  const completion = operation("/api/v1/connections/pluggy/completions", "post");
+  const detail = operation("/api/v1/connections/{connectionId}", "get");
+  const disconnect = operation("/api/v1/connections/{connectionId}/disconnect", "post");
+  const sorted = (values?: unknown[]) => [...(values ?? [])].sort();
+  const hasIdempotencyKey = (op: Operation) =>
+    op.parameters?.some((p) => p.in === "header" && p.name === "Idempotency-Key") ?? false;
+
+  it("as quatro operações exigem bearer Auth0 e nenhuma pede Idempotency-Key", () => {
+    for (const op of [session, completion, detail, disconnect]) {
+      expect(op.security).toEqual([{ auth0: [] }]);
+      expect(hasIdempotencyKey(op)).toBe(false);
+    }
+  });
+
+  it("a sessão e a desconexão não têm corpo; a conclusão recebe só itemId", () => {
+    expect(session.requestBody).toBeUndefined();
+    expect(disconnect.requestBody).toBeUndefined();
+    const body = completion.requestBody?.content["application/json"]?.schema;
+    expect(Object.keys(body?.properties ?? {}).sort()).toEqual(Object.keys(completeConnectionInputSchema.shape).sort());
+    expect(body?.required).toEqual(["itemId"]);
+  });
+
+  it("a sessão devolve exatamente connection, connectToken e expiresAt", () => {
+    const body = jsonSchema(session, "201");
+    expect(sorted(body.required)).toEqual(Object.keys(pluggySessionSchema.shape).sort());
+  });
+
+  it.each([
+    ["sessão", session, "201"],
+    ["conclusão", completion, "200"],
+    ["consulta", detail, "200"],
+    ["desconexão", disconnect, "200"],
+  ] as [string, Operation, string][])("a conexão na resposta da %s tem exatamente os campos do cliente", (name, op, code) => {
+    const body = jsonSchema(op, code);
+    const connection = name === "sessão" ? body.properties?.connection : body;
+    expect(sorted(connection?.required)).toEqual(Object.keys(connectionSchema.shape).sort());
+    expect(sorted(connection?.properties?.consent?.required)).toEqual(Object.keys(consentSchema.shape).sort());
+  });
+
+  it.each([
+    ["conectada", connectionView()],
+    ["pendente", pendingConnectionView()],
+    ["parcialmente disponível", connectionView({ status: "partially_available" })],
+    [
+      "com consentimento revogado",
+      connectionView({
+        status: "revoked",
+        consent: { ...connectionView().consent, status: "revoked", revokedAt: "2026-10-10T09:00:00.000Z" },
+      }),
+    ],
+    ["desconectada", connectionView({ status: "disconnected" })],
+  ])("a conexão %s é válida no contrato e no cliente", (_name, fixture) => {
+    expect(violations(jsonSchema(detail, "200") as ContractSchema, fixture)).toEqual([]);
+    expect(connectionSchema.safeParse(fixture).success).toBe(true);
+  });
+
+  it("a sessão fictícia é válida no contrato e no cliente", () => {
+    expect(violations(jsonSchema(session, "201") as ContractSchema, sessionView())).toEqual([]);
+    expect(pluggySessionSchema.safeParse(sessionView()).success).toBe(true);
+  });
+
+  it("o provedor e os enums da conexão e do consentimento são os mesmos do cliente", () => {
+    const connection = jsonSchema(detail, "200") as ContractSchema;
+    expect(connection.properties?.provider?.enum).toEqual(["pluggy"]);
+    expect(connectionSchema.shape.provider.value).toBe("pluggy");
+    expect(sorted(connection.properties?.status?.enum)).toEqual([...CONNECTION_STATUSES].sort());
+    expect(sorted(connection.properties?.consent?.properties?.status?.enum)).toEqual([...CONSENT_STATUSES].sort());
   });
 });

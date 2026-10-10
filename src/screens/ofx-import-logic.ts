@@ -1,6 +1,6 @@
 import { isUnauthorized } from "../lib/accounts/messages";
 import { PROBLEM_CODES, ProblemDetailsError } from "../lib/api/errors";
-import { mustRotateIdempotencyKey } from "../lib/idempotency";
+import { mustRotateIdempotencyKey, newIdempotencyKey } from "../lib/idempotency";
 import { ingestionErrorMessage } from "../lib/ingestions/messages";
 import {
   EXTERNAL_ID_MISSING,
@@ -120,4 +120,12 @@ export function classifyImportError(error: unknown, fallback: string): ImportFai
     rotateKey: mustRotateIdempotencyKey(error),
     restart,
   };
+}
+
+/**
+ * Chave da confirmacao depois de uma falha: a mesma, para o reenvio devolver a mesma importacao
+ * sem duplicar transacoes, salvo quando o backend recusou a chave.
+ */
+export function confirmKeyAfterFailure(currentKey: string, failure: ImportFailure): string {
+  return failure.kind === "message" && failure.rotateKey ? newIdempotencyKey() : currentKey;
 }

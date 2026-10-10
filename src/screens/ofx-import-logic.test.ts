@@ -7,6 +7,7 @@ import { importRunSchema } from "../lib/ingestions/schema";
 import { IMPORT_RUN_STATUSES } from "../lib/ingestions/types";
 import {
   classifyImportError,
+  confirmKeyAfterFailure,
   countLabel,
   itemAmount,
   itemSituation,
@@ -132,5 +133,21 @@ describe("classifyImportError", () => {
     expect(failure).toMatchObject({ message: expect.stringMatching(/PDF não é aceito/) });
     expect(JSON.stringify(failure)).not.toContain("detalhe técnico");
     expect(classifyImportError(problem(409, "ACCOUNT_ARCHIVED"), "x")).toMatchObject({ restart: false });
+  });
+});
+
+describe("confirmKeyAfterFailure", () => {
+  const KEY = "5b0c6f3e-2d4a-4e8b-9c1f-7a6b5c4d3e2f";
+
+  it("reenvio após falha de rede ou prévia expirada mantém a chave: o backend não duplica", () => {
+    expect(confirmKeyAfterFailure(KEY, classifyImportError(new TypeError("Network request failed"), "x"))).toBe(KEY);
+    expect(confirmKeyAfterFailure(KEY, classifyImportError(problem(409, "INVALID_REQUEST"), "x"))).toBe(KEY);
+    expect(confirmKeyAfterFailure(KEY, { kind: "unauthorized" })).toBe(KEY);
+  });
+
+  it.each(["IDEMPOTENCY_KEY_REUSED", "IDEMPOTENCY_KEY_EXPIRED"])("troca a chave quando o backend a recusa (%s)", (code) => {
+    const next = confirmKeyAfterFailure(KEY, classifyImportError(problem(409, code), "x"));
+    expect(next).not.toBe(KEY);
+    expect(next).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

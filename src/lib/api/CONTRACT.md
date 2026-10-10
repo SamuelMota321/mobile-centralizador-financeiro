@@ -164,12 +164,17 @@ Enquanto nao houver decisao, o acesso usa `src/lib/api/http-client.ts` + tipos a
 | `orval` | hooks + zod | util se adotarmos react-query |
 | `openapi-generator` (typescript-fetch) | cliente completo | JVM; mais pesado |
 
-## Sprint 3 (planejado)
+## Sprint 3
 
 Baseline da Fase 1 do Dev 2 (2026-10-07), atualizado com o contrato backend S3-01 do Dev 1
 (`docs/planejamento/sprint-03/contrato-backend-s3-01.html`) e, em 2026-10-09, com o OpenAPI do
-backend em `2c416cd`, que publica as rotas de OFX. Em divergencia, o cliente segue o OpenAPI.
+backend em `2c416cd`, que publica as rotas de OFX, e depois em `605cb07`, que publica as rotas de
+conexao Pluggy. Em divergencia, o cliente segue o OpenAPI.
 O plano da S3-08 (docs @ `1f68771`) registra a reconciliacao em curso.
+
+Consolidacao da Fase 5 do Dev 2 (2026-10-10): `openapi.snapshot.json` e identico ao
+`openapi/openapi.json` do backend em **`605cb07`** (HEAD de `origin/main`). Nenhuma funcao segue
+como Proposed; o que falta no contrato esta em "Divergencias e pendencias com o Dev 1".
 
 ### Operacoes
 
@@ -178,16 +183,20 @@ O plano da S3-08 (docs @ `1f68771`) registra a reconciliacao em curso.
 | `POST /api/v1/ingestions/ofx/previews` (multipart: `file` e `destinationAccountId`) + `Idempotency-Key` | `createOfxPreview()` | Approved — OpenAPI @ 2c416cd |
 | `POST /api/v1/ingestions/{importRunId}/confirmations` (JSON: `destinationAccountId`) + `Idempotency-Key` | `confirmImport()` | Approved — OpenAPI @ 2c416cd |
 | `GET /api/v1/ingestions/{importRunId}` | `getImportRun()` | Approved — OpenAPI @ 2c416cd |
-| `POST /api/v1/connections/pluggy/sessions` | — (fase 4) | contrato S3-01; fora do OpenAPI |
-| `POST /api/v1/connections/pluggy/completions` + `Idempotency-Key` | — (fase 4) | contrato S3-01; fora do OpenAPI |
-| `GET /api/v1/connections/{connectionId}` | — (fase 4) | contrato S3-01; fora do OpenAPI |
-| `PUT /api/v1/connections/{connectionId}/accounts/{providerAccountId}/mapping` | — (fase 4) | contrato S3-01; fora do OpenAPI |
-| `POST /api/v1/connections/{connectionId}/disconnect` | — (fase 4) | contrato S3-01; fora do OpenAPI |
+| `POST /api/v1/connections/pluggy/sessions` (sem corpo) | `startPluggySession()` | Approved — OpenAPI @ 605cb07 |
+| `POST /api/v1/connections/pluggy/completions` (JSON: `itemId`) | `completePluggyConnection()` | Approved — OpenAPI @ 605cb07 |
+| `GET /api/v1/connections/{connectionId}` | `getConnection()` | Approved — OpenAPI @ 605cb07 |
+| `POST /api/v1/connections/{connectionId}/disconnect` (sem corpo) | `disconnectConnection()` | Approved — OpenAPI @ 605cb07 |
+| `PUT /api/v1/connections/{connectionId}/accounts/{providerAccountId}/mapping` | — | contrato S3-01; fora do OpenAPI (S3-08) |
 
-Modulo: `src/lib/ingestions/`. Os schemas de ingestao sao inline no OpenAPI (fora de
+Modulos: `src/lib/ingestions/` e `src/lib/connections/`. Os schemas de ingestao sao inline no OpenAPI (fora de
 `components.schemas`) e transcritos a mao. `contract.test.ts` cobre as tres operacoes: bearer,
 `Idempotency-Key` obrigatoria na previa e na confirmacao, campos do multipart e da confirmacao,
-campos exatos do ImportRun e do item, enums e dados ficticios validados contra o snapshot.
+campos exatos do ImportRun e do item, enums e dados ficticios validados contra o snapshot. O bloco
+de Connections cobre as quatro operacoes de conexao: bearer, nenhuma `Idempotency-Key`, corpos,
+campos exatos da conexao e do consentimento, enums e dados ficticios.
+Na Fase 5 entraram fixtures para os estados que faltavam (ImportRun `expired` e `failed`;
+conexao `partially_available`, `revoked` e `disconnected`) e a paridade do `provider`.
 
 ### Comportamento verificado no backend (@ 2c416cd)
 
@@ -205,14 +214,42 @@ campos exatos do ImportRun e do item, enums e dados ficticios validados contra o
 - Sem as variaveis `R2_*` no backend, a previa responde 503: o teste local de ponta a ponta
   depende de um bucket de desenvolvimento.
 
-### Ainda em aberto
+### Comportamento verificado no backend (@ 605cb07) — conexoes
 
-1. Validade de 24 horas da previa: decidida na S3-08, mas `expiresAt` ainda nao esta no OpenAPI.
-2. Estado `awaiting_account_mapping` e operacao de mapeamento (S3-08): ainda sem campos. Se o
-   fluxo passar a "arquivo primeiro, conta depois", `createOfxPreview()` muda.
-3. Pluggy (S3-05): campos de `sessions` e `completions`; regra de conta "correspondente"
-   (Dev 3); credenciais do Sandbox.
-4. Credenciais R2 de desenvolvimento para testar a importacao contra o backend local.
+- A sessao cria uma conexao `pending_authorization` e devolve o `connectToken` limitado (30 min).
+  O cliente usa o token so para abrir o widget e nao o guarda.
+- A conclusao recebe o `itemId` do widget; o backend busca o item no Pluggy, confere que ele e
+  desta pessoa e deste tenant e reaplica o estado. Reenviar o mesmo `itemId` e seguro, embora
+  a rota nao peca `Idempotency-Key` (diferente do S3-01). Responde 200, sem importacao inicial.
+- Estados da conexao: `pending_authorization`, `connected`, `partially_available`, `expired`,
+  `revoked`, `disconnected`. Consentimento: `granted`, `expired`, `revoked`, ou nulo antes da
+  autorizacao; `products` e uma lista aberta de produtos do Pluggy.
+- Erros: `CONNECTION_NOT_FOUND` (404), `CONNECTION_CONFLICT` (409), `INTEGRATION_UNAVAILABLE`
+  (503), alem de `INVALID_REQUEST` e dos erros de sessao.
+- O backend cria o token sem `oauthRedirectUri`: o retorno do OAuth por deep link nao e
+  configuravel pelo cliente.
+
+### Divergencias e pendencias com o Dev 1 (S3-08)
+
+1. Validade de 24 horas da previa: decidida na S3-08, mas `expiresAt` nao esta no OpenAPI; a
+   expiracao so aparece como 404/409 ou status `expired`.
+2. `awaiting_account_mapping` e a operacao de mapeamento de contas (S3-08 e D12) nao existem no
+   backend. Se o fluxo OFX passar a "arquivo primeiro, conta depois", `createOfxPreview()` muda.
+3. Nao ha motivo de duplicidade: o item traz so `isDuplicate`, sem enum de motivos.
+4. Nao ha `GET /connections`: a tela mostra so a conexao do fluxo atual.
+5. Importacao inicial da conexao Pluggy nao existe; a conclusao responde sem importar nada.
+6. Conclusao sem `Idempotency-Key` (o S3-01 pedia uma); o reenvio do mesmo `itemId` e seguro
+   pelo codigo do backend.
+7. Cada sessao aberta e cancelada deixa uma conexao `pending_authorization` no backend.
+8. O connect token e criado sem `oauthRedirectUri`; o retorno do OAuth pelo scheme `coinciente`
+   nao e possivel.
+9. A confirmacao nao devolve os ids das transacoes criadas, e `errorCode` dos itens nao tem lista
+   publicada.
+
+Bloqueios de ambiente: sem `R2_*` no backend local a previa responde 503; sem `PLUGGY_CLIENT_ID` e
+`PLUGGY_CLIENT_SECRET` o Sandbox nao e chamado. Regra de conta "correspondente" (D12) e decisao D3
+dependem do Dev 3. Perguntas registradas na secao 11 de
+`docs/planejamento/sprint-03/s3-01-necessidades-dos-clientes.md`.
 
 ### Decisoes do cliente
 
@@ -228,7 +265,25 @@ campos exatos do ImportRun e do item, enums e dados ficticios validados contra o
   sessao) e depois o status HTTP. O `detail` nunca e exibido.
 - Importacao e conexao abrem como `FormScreen` a partir de `AccountsScreen` (fases 3 e 4), sem
   aba nova em `Section` (`src/ui/screens.tsx`).
-- `expo-document-picker@57.0.3` instalado na fase 3 (`OfxImportScreen`). Aprovada, ainda nao
-  instalada: `react-native-pluggy-connect@1.6.0` (fase 4). Risco: o retorno do OAuth pelo scheme
-  `coinciente` so e testavel de ponta a ponta em development build; no Expo Go, apenas conectores
-  Sandbox sem OAuth real (ex.: "Pluggy Bank").
+- `expo-document-picker@57.0.3` instalado na fase 3 (`OfxImportScreen`).
+- Fase 4: `react-native-pluggy-connect@1.6.0` e o peer `react-native-webview@13.16.1` (versao do
+  Expo SDK 57, incluida no Expo Go) instalados. O OAuth abre em WebView dentro do app
+  (`forceOauthInBrowser={false}`), sem depender do retorno pelo scheme `coinciente`, que exigiria
+  `oauthRedirectUri` no backend e development build. O peer opcional `pluggy-js` nao e instalado:
+  o payload do widget e tratado como `unknown` e so `item.id` e lido.
+- `ConnectScreen` guarda token, item e conexao so no estado da tela; nada vai para SecureStore
+  ou AsyncStorage.
+
+### Isolamento (Fase 5)
+
+- Ao sair, `Root` (`App.tsx`) troca para `SignInScreen` e desmonta todas as telas: previa,
+  confirmacao, arquivo escolhido e estado do widget somem. `SessionEpoch` impede que um 401
+  atrasado encerre a sessao seguinte.
+- Nada de importacao ou conexao vai para SecureStore ou AsyncStorage (o SecureStore guarda so a
+  sessao Auth0); nao ha `console.*` no codigo de producao. O `detail` do backend nunca e exibido.
+- Importacao ou conexao de outro tenant responde 404, com o mesmo texto de uma inexistente.
+- Fora do controle do app: as WebViews de `react-native-pluggy-connect@1.6.0` mantem cookies de
+  proposito (o OAuth das instituicoes retoma a sessao aberta no widget). Num aparelho
+  compartilhado, cookies da instituicao podem passar ao proximo usuario; limpar exige dependencia
+  nativa nova, fora do Expo Go (decisao pendente). O SDK tambem faz `console.error` com
+  `error.message` quando falha ao abrir a URL de OAuth.
