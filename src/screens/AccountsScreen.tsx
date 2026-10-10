@@ -17,6 +17,7 @@ import { IconAccounts, IconPlus } from "../ui/icons";
 import { AppScreen, type Section, useListStyles } from "../ui/screens";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 import { AccountFormScreen } from "./AccountFormScreen";
+import { ConnectScreen } from "./ConnectScreen";
 import { OfxImportScreen } from "./OfxImportScreen";
 import { useForegroundRefresh } from "./use-foreground-refresh";
 
@@ -26,7 +27,8 @@ type Mode =
   | { kind: "list" }
   | { kind: "create" }
   | { kind: "edit"; account: Account }
-  | { kind: "import" };
+  | { kind: "import" }
+  | { kind: "connect" };
 
 interface NoticeState {
   tone: NoticeTone;
@@ -132,6 +134,10 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
     return <OfxImportScreen onCancel={() => setMode({ kind: "list" })} onDone={finishForm} />;
   }
 
+  if (mode.kind === "connect") {
+    return <ConnectScreen onCancel={() => setMode({ kind: "list" })} onDone={finishForm} />;
+  }
+
   if (mode.kind !== "list") {
     return (
       <AccountFormScreen
@@ -170,6 +176,11 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
                 onPress={() => setMode({ kind: "import" })}
               />
             ) : null}
+            <Button
+              label="Conectar banco (Sandbox)"
+              variant="text"
+              onPress={() => setMode({ kind: "connect" })}
+            />
           </>
         ) : null
       }

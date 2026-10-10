@@ -24,7 +24,7 @@ export const problemDetailsSchema = z.object({
 
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
 
-/** Codigos conhecidos do backend (@ backend e95d2af). */
+/** Codigos conhecidos do backend (@ backend 605cb07). */
 export const PROBLEM_CODES = {
   invalidRequest: "INVALID_REQUEST",
   authenticationRequired: "AUTHENTICATION_REQUIRED",
@@ -43,6 +43,9 @@ export const PROBLEM_CODES = {
   categoryAlreadyExists: "CATEGORY_ALREADY_EXISTS",
   idempotencyKeyReused: "IDEMPOTENCY_KEY_REUSED",
   idempotencyKeyExpired: "IDEMPOTENCY_KEY_EXPIRED",
+  connectionNotFound: "CONNECTION_NOT_FOUND",
+  connectionConflict: "CONNECTION_CONFLICT",
+  integrationUnavailable: "INTEGRATION_UNAVAILABLE",
   internalError: "INTERNAL_ERROR",
 } as const;
 
