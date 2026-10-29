@@ -1,4 +1,4 @@
-// Alinhado ao contrato OpenAPI do backend em /api/v1/accounts (@ backend fa9b62a).
+// Alinhado ao contrato OpenAPI do backend em /api/v1/accounts (@ backend e95d2af).
 // As rotas de contas descrevem seus schemas inline (fora de components.schemas), entao
 // os tipos abaixo sao transcritos a mao e devem acompanhar openapi.snapshot.json.
 // Sem pacote compartilhado: web e mobile mantem copias independentes.

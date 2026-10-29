@@ -47,9 +47,11 @@ export async function apiRequest<T>(
   const { body, query, headers, idempotencyKey, ...rest } = options;
 
   const token = await tokenProvider();
+  // FormData segue como esta: o React Native define o content-type com o boundary do multipart.
+  const isFormData = body instanceof FormData;
   const finalHeaders = new Headers(headers);
   finalHeaders.set("accept", "application/json");
-  if (body !== undefined) {
+  if (body !== undefined && !isFormData) {
     finalHeaders.set("content-type", "application/json");
   }
   if (token) {
@@ -62,7 +64,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${apiBaseUrl}${path}${buildQuery(query)}`, {
     ...rest,
     headers: finalHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
   const raw = await response.text();

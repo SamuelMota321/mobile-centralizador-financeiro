@@ -1,5 +1,5 @@
 // Alinhado a TransactionView, CreateTransaction, CreateTransfer, TransferView e
-// UpdateTransactionCategory do OpenAPI do backend (@ backend fa9b62a). Transcrito a mao.
+// UpdateTransactionCategory do OpenAPI do backend (@ backend e95d2af). Transcrito a mao.
 
 export const MOVEMENT_TYPES = ["income", "expense"] as const;
 export type MovementType = (typeof MOVEMENT_TYPES)[number];

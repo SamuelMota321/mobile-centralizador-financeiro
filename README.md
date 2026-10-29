@@ -15,6 +15,13 @@ precedência explicada e o isolamento de estado entre sessões. A interface segu
 Guide 1.0 (`PRODUCT.md`, `DESIGN.md`): fontes Manrope e Newsreader, tema claro e escuro,
 abas embaixo e áreas seguras respeitadas.
 
+A Sprint 3 (S3-04 e S3-07) acrescenta, a partir de Contas, a importação de extrato OFX
+(seletor de documentos, prévia com duplicatas antes da confirmação, confirmação com
+Idempotency-Key e resultado com importadas, ignoradas e com erro) e a conexão de banco pelo
+Pluggy em ambiente Sandbox (explicação do que é autorizado, widget em tela cheia, registro e
+detalhe da conexão, remoção com confirmação). Contrato no backend `605cb07`; ver
+`src/lib/api/CONTRACT.md`.
+
 O login usa Authorization Code com PKCE (aplicação Auth0 do tipo **Native**, sem client
 secret) e o token fica no Keychain/Keystore via `expo-secure-store`.
 
@@ -187,7 +194,7 @@ credenciais. Os arquivos `*.test.ts` ficam ao lado do código testado.
 | `src/lib/civil-date.test.ts` | data civil sem fuso, anos bissextos, datas inexistentes e DD/MM/AAAA |
 | `src/lib/idempotency.test.ts` | chave UUID nova (`expo-crypto`) e quando trocá-la (`REUSED`/`EXPIRED`) |
 | `src/lib/api/pagination.test.ts` | leitura de todas as páginas para seletores, com aviso de truncamento |
-| `src/lib/api/contract.test.ts` | operações existem no `openapi.snapshot.json`; fixtures de cada resposta validadas contra o snapshot e contra o Zod; enums iguais aos do contrato |
+| `src/lib/api/contract.test.ts` | operações existem no `openapi.snapshot.json`; fixtures de cada resposta validadas contra o snapshot e contra o Zod; enums iguais aos do contrato; importação OFX e conexões (bearer, Idempotency-Key, campos e todos os estados) |
 | `src/lib/accounts/*.test.ts` | contas: schema, PATCH só com alterações, mensagens, bearer ausente após logout |
 | `src/lib/transactions/*.test.ts` | movimentações: schemas de entrada, chamadas com Idempotency-Key, mensagens |
 | `src/lib/categories/api.test.ts`, `src/lib/category-rules/*.test.ts` | categorias e regras: chamadas, gramática da condição e limites de prioridade |
@@ -195,6 +202,10 @@ credenciais. Os arquivos `*.test.ts` ficam ao lado do código testado.
 | `src/screens/movement-presentation.test.ts` | rótulos, sinais, estados de categorização e paginação sem itens repetidos |
 | `src/screens/category-logic.test.ts` | nome de categoria repetido e erros de categorias e de categorização |
 | `src/screens/rule-logic.test.ts` | frase da regra, gramática, PATCH só com o que mudou e erros de regras |
+| `src/lib/ingestions/*.test.ts` | importação OFX: arquivo vazio, PDF e acima de 10 MiB recusados antes do envio, multipart com Idempotency-Key, schemas e mensagens sem o `detail` |
+| `src/lib/connections/*.test.ts` | conexões: chamadas das quatro operações, schemas e mensagens (404 neutro, 409 e 503) |
+| `src/screens/ofx-import-logic.test.ts` | passos da importação por estado, resumo da prévia e do resultado parcial, erros e chave da confirmação mantida no reenvio (trocada só na recusa) |
+| `src/screens/connect-logic.test.ts` | texto de cada estado da conexão, ações permitidas, consentimento no horário de Brasília e leitura só do `item.id` do widget |
 | `src/auth/session-store.test.ts` | sessão salva e lida do SecureStore; conteúdo corrompido é apagado; expiração no limite exato |
 | `src/auth/session-epoch.test.ts` | resposta de sessão anterior (ex.: 401 atrasado) não afeta a sessão atual |
 
@@ -229,6 +240,8 @@ componentes ainda não decidida); são verificados pelo roteiro de demonstraçã
 | `src/lib/api/CONTRACT.md` | estado do contrato OpenAPI e opções de gerador |
 | `src/lib/accounts/` | tipos, Zod de borda, funções da API, diff do PATCH e mensagens por código |
 | `src/lib/transactions/`, `categories/`, `category-rules/` | clientes tipados de Transactions, com Zod de borda e mensagens |
+| `src/lib/ingestions/`, `src/lib/connections/` | clientes tipados da importação OFX e das conexões, com Zod de borda, validação local do arquivo e mensagens |
+| `src/screens/OfxImportScreen.tsx`, `ConnectScreen.tsx` | importação OFX e conexão Pluggy Sandbox, abertas a partir de Contas |
 | `vitest.config.mts` | configuração dos testes (variáveis fictícias) |
 
 ## Demonstração da Sprint 1
@@ -255,6 +268,38 @@ O roteiro completo (web e mobile, usuários A e B, precedência de regras, reenv
 duplicar e isolamento) está em
 `documentacao-centralizador-financeiro/prompts/sprint2/dev2/roteiro-demonstracao-sprint-2.md`.
 A parte mobile exige a aplicação Auth0 do tipo Native configurada (passo 4.1).
+
+## Demonstração da Sprint 3
+
+Roteiro completo (OFX, Pluggy e isolamento entre A e B, web e mobile) em
+`documentacao-centralizador-financeiro/prompts/sprint3/dev2/roteiro-demonstracao-sprint-3.md`.
+
+Sem backend, os fluxos só rodam pelos testes automatizados (`pnpm test`), com `fetch`
+simulado. Com o backend local (passo 3), os dois fluxos precisam de credenciais no `.env`
+**do backend**:
+
+- **Importação OFX:** o backend guarda o arquivo da prévia no R2. Sem `R2_ENDPOINT`,
+  `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` (as quatro juntas) no `.env` do backend, a prévia
+  responde 503 e a tela mostra que o serviço está indisponível. Arquivos sintéticos para testar
+  estão em `backend-centralizador-financeiro/test/fixtures/ofx/`.
+- **Conexão Pluggy:** sem `PLUGGY_CLIENT_ID` e `PLUGGY_CLIENT_SECRET` (Sandbox) no `.env` do
+  backend, abrir a sessão responde 503. O backend só sobe se as variáveis `PLUGGY_*`,
+  `QSTASH_*` e `PUBLIC_API_BASE_URL` vierem todas juntas (veja o `.env.example` do backend). O
+  cliente nunca recebe essas credenciais, só o `connectToken` de 30 minutos de cada tentativa.
+
+Limitações conhecidas:
+
+- O widget do Pluggy usa `react-native-webview`, incluído no Expo Go. O OAuth das instituições
+  abre numa WebView dentro do app: o retorno pelo scheme `coinciente` exigiria
+  `oauthRedirectUri` no backend e development build.
+- As WebViews do SDK do Pluggy mantêm cookies de propósito. Num aparelho compartilhado,
+  cookies da instituição podem passar ao próximo usuário; limpar exigiria uma dependência
+  nativa nova (decisão pendente).
+- A prévia não mostra quando expira (24 horas): `expiresAt` não está no contrato.
+- Não há lista de conexões (`GET /connections` não existe): a tela mostra só a conexão do fluxo
+  atual, que some ao sair da tela.
+- A conexão não importa transações nem associa contas ainda (importação inicial e mapeamento
+  ficam para a S3-08 no backend).
 
 ## Ambiente
 

@@ -19,6 +19,9 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   [PROBLEM_CODES.accountArchived]: ACCOUNT_UNAVAILABLE_MESSAGE,
   [PROBLEM_CODES.connectedAccountReadOnly]:
     "Contas conectadas não podem ser editadas aqui. Você ainda pode desativá-las.",
+  // Só a desativação responde este código: a conta ainda é condição de uma regra ativa.
+  [PROBLEM_CODES.categoryRuleConflict]:
+    "Esta conta é usada por uma regra ativa. Desative ou remova a regra em Regras antes de desativar a conta.",
   [PROBLEM_CODES.invalidRequest]: "Revise os campos destacados.",
   [PROBLEM_CODES.authenticationRequired]: "Sua sessão expirou. Entre novamente.",
   [PROBLEM_CODES.identityContextUnavailable]:

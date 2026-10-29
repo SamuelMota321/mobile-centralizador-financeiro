@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ACCOUNT_TYPES } from "./types";
 
-// Validacao de borda espelhando o contrato OpenAPI do backend (@ backend fa9b62a)
+// Validacao de borda espelhando o contrato OpenAPI do backend (@ backend e95d2af)
 // e o schema inbound `account-input.schema.ts`. Nao substitui a validacao do backend,
 // que reaplica a normalizacao completa de nome/instituicao e as invariantes monetarias.
 

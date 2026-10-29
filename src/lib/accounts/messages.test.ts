@@ -34,6 +34,13 @@ describe("accountErrorMessage", () => {
     }
   });
 
+  it("conta usada por regra ativa orienta a desativar a regra antes", () => {
+    const conflict = problem({ status: 409, code: "CATEGORY_RULE_CONFLICT" });
+    expect(accountErrorMessage(conflict, "Falha.")).toContain("regra ativa");
+    // Não é "indisponível": a conta existe e continua na lista.
+    expect(isAccountUnavailable(conflict)).toBe(false);
+  });
+
   it("usa o fallback para codigos e erros desconhecidos", () => {
     expect(accountErrorMessage(problem({ code: "UNMAPPED" }), "Falha.")).toBe("Falha.");
     expect(accountErrorMessage(new Error("boom"), "Falha.")).toBe("Falha.");

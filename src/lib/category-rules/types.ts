@@ -1,4 +1,4 @@
-// Alinhado a CategoryRuleView, CreateCategoryRule e UpdateCategoryRule (@ backend fa9b62a).
+// Alinhado a CategoryRuleView, CreateCategoryRule e UpdateCategoryRule (@ backend e95d2af).
 
 export const RULE_CONDITION_FIELDS = ["description", "type", "accountId"] as const;
 export type RuleConditionField = (typeof RULE_CONDITION_FIELDS)[number];
