@@ -145,3 +145,16 @@ Enquanto nao houver decisao, o acesso usa `src/lib/api/http-client.ts` + tipos a
 | `@hey-api/openapi-ts` | tipos + SDK de funcoes | plugin de zod opcional |
 | `orval` | hooks + zod | util se adotarmos react-query |
 | `openapi-generator` (typescript-fetch) | cliente completo | JVM; mais pesado |
+
+## Sprint 4 HU-008 — baseline de conexao e execucao
+
+Levantamento do cliente mobile em 2026-10-26. O codigo atual nao possui fluxo Pluggy nem chamadas para rotas de conexao ou `sync-runs`; buscas por `connectionId`, `runId` e `statusUrl` em `src` e `App.tsx` nao encontraram usos.
+
+- `connectionId`: o cliente nao tem origem/recebimento, persistencia ou recuperacao desse identificador. A tela de contas e a API `/accounts` tratam de contas financeiras, nao de conexoes Pluggy.
+- `runId` e `statusUrl`: nao ha chamada para iniciar ou consultar uma execucao, nem estado persistido para retomar seu acompanhamento ao sair e voltar ao fluxo.
+- `src/auth/session-store.ts` salva no SecureStore somente `accessToken` e `expiresAt`; esse armazenamento nao contem estado de conexao ou execucao. A secao inicial em `App.tsx` e estado em memoria e nao recupera um alvo de conexao.
+- O contrato deste cliente nao inclui listagem de conexoes. Nenhuma listagem deve ser presumida para recuperar `connectionId`.
+
+Evidencias: cobertura atual deste arquivo; `src/auth/session-store.ts`; `src/auth/AuthContext.tsx`; `App.tsx`; `src/lib/api/openapi.snapshot.json` (snapshot de referencia do cliente).
+
+Status: dependencia do cliente pendente. Quando o fluxo for integrado, a origem e a recuperacao de `connectionId`, bem como a manutencao de `runId`/`statusUrl`, devem seguir o OpenAPI vigente do backend. Este levantamento nao define rota, armazenamento ou polling.
