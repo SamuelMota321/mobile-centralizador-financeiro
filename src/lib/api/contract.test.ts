@@ -22,8 +22,8 @@ import { CATEGORIZATION_STATUSES, MOVEMENT_TYPES, UNCERTAIN_STATUSES } from "../
 import { previewRun, resultRun } from "../ingestions/fixtures";
 import { confirmImportInputSchema, importRunSchema, ingestionItemSchema } from "../ingestions/schema";
 import { IMPORT_RUN_STATUSES, INGESTION_ITEM_STATUSES, OFX_VARIANTS } from "../ingestions/types";
-import { connectionView, pendingConnectionView, sessionView } from "../connections/fixtures";
-import { completeConnectionInputSchema, connectionSchema, consentSchema, pluggySessionSchema } from "../connections/schema";
+import { completionAcceptedView, connectionView, initialImportView, pendingConnectionView, sessionView } from "../connections/fixtures";
+import { completeConnectionInputSchema, completionAcceptedSchema, connectionSchema, consentSchema, initialImportSchema, pluggySessionSchema } from "../connections/schema";
 import { CONNECTION_STATUSES, CONSENT_STATUSES } from "../connections/types";
 
 // Verifica o cliente contra o snapshot versionado do OpenAPI do backend: ao atualizar o
@@ -34,6 +34,7 @@ interface JsonSchema {
   properties?: Record<string, JsonSchema>;
   items?: JsonSchema;
   additionalProperties?: boolean;
+  allOf?: JsonSchema[];
 }
 
 interface Operation {
@@ -471,7 +472,7 @@ describe("contrato OpenAPI de Ingestions", () => {
   });
 });
 
-// Connections (Pluggy): schemas inline no OpenAPI (@ backend 605cb07).
+// Connections (Pluggy): schemas inline no OpenAPI atual do backend.
 
 describe("contrato OpenAPI de Connections", () => {
   const session = operation("/api/v1/connections/pluggy/sessions", "post");
@@ -482,11 +483,12 @@ describe("contrato OpenAPI de Connections", () => {
   const hasIdempotencyKey = (op: Operation) =>
     op.parameters?.some((p) => p.in === "header" && p.name === "Idempotency-Key") ?? false;
 
-  it("as quatro operações exigem bearer Auth0 e nenhuma pede Idempotency-Key", () => {
+  it("a conclusão exige Idempotency-Key e todas as operações exigem bearer Auth0", () => {
     for (const op of [session, completion, detail, disconnect]) {
       expect(op.security).toEqual([{ auth0: [] }]);
-      expect(hasIdempotencyKey(op)).toBe(false);
     }
+    expect(completion.parameters?.find((p) => p.name === "Idempotency-Key")).toMatchObject({ in: "header", required: true });
+    for (const op of [session, detail, disconnect]) expect(hasIdempotencyKey(op)).toBe(false);
   });
 
   it("a sessão e a desconexão não têm corpo; a conclusão recebe só itemId", () => {
@@ -504,8 +506,6 @@ describe("contrato OpenAPI de Connections", () => {
 
   it.each([
     ["sessão", session, "201"],
-    ["conclusão", completion, "200"],
-    ["consulta", detail, "200"],
     ["desconexão", disconnect, "200"],
   ] as [string, Operation, string][])("a conexão na resposta da %s tem exatamente os campos do cliente", (name, op, code) => {
     const body = jsonSchema(op, code);
@@ -527,7 +527,7 @@ describe("contrato OpenAPI de Connections", () => {
     ],
     ["desconectada", connectionView({ status: "disconnected" })],
   ])("a conexão %s é válida no contrato e no cliente", (_name, fixture) => {
-    expect(violations(jsonSchema(detail, "200") as ContractSchema, fixture)).toEqual([]);
+    expect(violations(jsonSchema(detail, "200").allOf?.[0] as ContractSchema, fixture)).toEqual([]);
     expect(connectionSchema.safeParse(fixture).success).toBe(true);
   });
 
@@ -537,10 +537,26 @@ describe("contrato OpenAPI de Connections", () => {
   });
 
   it("o provedor e os enums da conexão e do consentimento são os mesmos do cliente", () => {
-    const connection = jsonSchema(detail, "200") as ContractSchema;
+    const connection = jsonSchema(detail, "200").allOf?.[0] as ContractSchema;
     expect(connection.properties?.provider?.enum).toEqual(["pluggy"]);
     expect(connectionSchema.shape.provider.value).toBe("pluggy");
     expect(sorted(connection.properties?.status?.enum)).toEqual([...CONNECTION_STATUSES].sort());
     expect(sorted(connection.properties?.consent?.properties?.status?.enum)).toEqual([...CONSENT_STATUSES].sort());
+  });
+
+  it("a conclusão devolve 202 com conexão e importação inicial aceita", () => {
+    const body = jsonSchema(completion, "202");
+    expect(sorted(body.required)).toEqual(Object.keys(completionAcceptedSchema.shape).sort());
+    expect(sorted(body.properties?.connection?.required)).toEqual(Object.keys(connectionSchema.shape).sort());
+    expect(sorted(body.properties?.initialImport?.required)).toEqual(Object.keys(initialImportSchema.shape).sort());
+    expect(completionAcceptedSchema.safeParse(completionAcceptedView()).success).toBe(true);
+    expect(violations(body.properties?.initialImport as ContractSchema, initialImportView())).toEqual([]);
+    expect(completion.responses["200"]).toBeUndefined();
+  });
+
+  it("a consulta publica initialImport anulável para acompanhar o processamento", () => {
+    const body = jsonSchema(detail, "200");
+    expect(body.allOf?.[1]?.required).toContain("initialImport");
+    expect(body.allOf?.[1]?.properties?.initialImport).toMatchObject({ nullable: true });
   });
 });

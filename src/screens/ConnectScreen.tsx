@@ -9,16 +9,19 @@ import {
   startPluggySession,
 } from "../lib/connections/api";
 import type { Connection } from "../lib/connections/types";
+import { newIdempotencyKey } from "../lib/idempotency";
 import { makeStyles, radius, type } from "../theme";
 import { Button, Notice, type NoticeTone, StatusChip } from "../ui/controls";
 import { FormScreen } from "../ui/screens";
 import {
   canCheckAgain,
+  canRefreshInitialImport,
   canDisconnect,
   classifyConnectionError,
   consentSummary,
   formatTimestamp,
   itemIdFromSuccess,
+  initialImportStatus,
   needsReconnect,
   statusView,
 } from "./connect-logic";
@@ -44,8 +47,8 @@ interface FlowNotice {
 type Phase =
   | { kind: "intro"; notice?: FlowNotice }
   | { kind: "widget"; connectToken: string }
-  | { kind: "completing"; itemId: string }
-  | { kind: "completeFailed"; itemId: string; notice: FlowNotice }
+  | { kind: "completing"; itemId: string; completionKey: string }
+  | { kind: "completeFailed"; itemId: string; completionKey: string; notice: FlowNotice }
   | { kind: "connection"; connection: Connection; notice?: FlowNotice };
 
 /**
@@ -61,6 +64,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
   const [busy, setBusy] = useState(false);
   // O widget dispara onClose tambem depois do sucesso; so o fechamento sem item e cancelamento.
   const itemReceived = useRef(false);
+  const completionInFlight = useRef(false);
 
   const start = useCallback(async () => {
     setBusy(true);
@@ -81,20 +85,27 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
   }, [handleUnauthorized]);
 
   const complete = useCallback(
-    async (itemId: string) => {
-      setPhase({ kind: "completing", itemId });
+    async (itemId: string, completionKey: string) => {
+      if (completionInFlight.current) return;
+      completionInFlight.current = true;
+      setPhase({ kind: "completing", itemId, completionKey });
       setBusy(true);
       try {
-        const connection = await completePluggyConnection(itemId);
-        setPhase({ kind: "connection", connection, notice: { tone: "success", text: "Conexão registrada." } });
+        const accepted = await completePluggyConnection(itemId, completionKey);
+        setPhase({
+          kind: "connection",
+          connection: { ...accepted.connection, initialImport: accepted.initialImport },
+          notice: { tone: "success", text: "Conexão registrada. Importação inicial aceita." },
+        });
       } catch (error) {
         const failure = classifyConnectionError(error, "Não foi possível registrar a conexão.");
         if (failure.kind === "unauthorized") {
           await handleUnauthorized();
           return;
         }
-        setPhase({ kind: "completeFailed", itemId, notice: { tone: "error", text: failure.message } });
+        setPhase({ kind: "completeFailed", itemId, completionKey, notice: { tone: "error", text: failure.message } });
       } finally {
+        completionInFlight.current = false;
         setBusy(false);
       }
     },
@@ -170,9 +181,10 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
           theme="light"
           forceOauthInBrowser={false}
           onSuccess={(data: unknown) => {
+            if (itemReceived.current) return;
             itemReceived.current = true;
             const itemId = itemIdFromSuccess(data);
-            if (itemId) void complete(itemId);
+            if (itemId) void complete(itemId, newIdempotencyKey());
             else
               setPhase({
                 kind: "intro",
@@ -180,6 +192,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
               });
           }}
           onError={() => {
+            if (itemReceived.current) return;
             // A mensagem do provedor nao e exibida.
             itemReceived.current = true;
             setPhase({
@@ -204,7 +217,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
   }
 
   if (phase.kind === "completeFailed") {
-    const { itemId } = phase;
+    const { itemId, completionKey } = phase;
     return (
       <FormScreen
         title="A conexão não foi registrada"
@@ -212,7 +225,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
         cancelDisabled={busy}
         footer={
           <>
-            <Button label="Tentar de novo" onPress={() => void complete(itemId)} loading={busy} />
+            <Button label="Tentar de novo" onPress={() => void complete(itemId, completionKey)} loading={busy} />
             <Button label="Começar de novo" variant="text" onPress={() => setPhase({ kind: "intro" })} disabled={busy} />
           </>
         }
@@ -226,6 +239,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
     const { connection } = phase;
     const view = statusView(connection.status);
     const consent = consentSummary(connection);
+    const importView = connection.initialImport ? initialImportStatus(connection.initialImport.status) : null;
     const finish = () => onDone(`Conexão com o banco: ${view.label.toLowerCase()}.`, view.noticeTone);
     return (
       <FormScreen
@@ -234,7 +248,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
         cancelDisabled={busy}
         footer={
           <>
-            {canCheckAgain(connection.status) ? (
+            {canCheckAgain(connection.status) || canRefreshInitialImport(connection.initialImport?.status) ? (
               <Button
                 label="Verificar de novo"
                 onPress={() => void update(connection, getConnection, "Não foi possível consultar a conexão.")}
@@ -257,6 +271,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
         }
       >
         {phase.notice ? <Notice tone={phase.notice.tone} text={phase.notice.text} /> : null}
+        {importView ? <Notice tone={importView.tone} text={importView.text} /> : null}
         <View style={styles.statusLine}>
           <StatusChip tone={view.tone} label={view.label} />
         </View>
@@ -273,9 +288,6 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
           {consent.expiresAt ? <SummaryRow label="Autorização válida até" value={consent.expiresAt} /> : null}
           <SummaryRow label="Última atualização" value={formatTimestamp(connection.updatedAt)} />
         </View>
-        <Text style={styles.help}>
-          A importação das movimentações desta conexão ainda não está disponível nesta versão.
-        </Text>
       </FormScreen>
     );
   }

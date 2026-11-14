@@ -7556,8 +7556,15 @@
     },
     "/api/v1/connections/pluggy/completions": {
       "post": {
-        "operationId": "PluggyConnectionsController_complete",
-        "parameters": [],
+        "operationId": "PluggyInitialImportController_complete",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "minLength": 1, "maxLength": 255 }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -7574,7 +7581,7 @@
           }
         },
         "responses": {
-          "200": {
+          "202": {
             "headers": {
               "X-Request-Id": {
                 "description": "Canonical request correlation identifier.",
@@ -7587,78 +7594,170 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "id",
-                    "provider",
-                    "status",
-                    "consent",
-                    "createdAt",
-                    "updatedAt"
-                  ],
+                  "required": ["connection", "initialImport"],
                   "properties": {
-                    "id": { "type": "string", "format": "uuid" },
-                    "provider": { "type": "string", "enum": ["pluggy"] },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "pending_authorization",
-                        "connected",
-                        "partially_available",
-                        "expired",
-                        "revoked",
-                        "disconnected"
-                      ]
+                    "connection": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "provider",
+                        "status",
+                        "consent",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "id": { "type": "string", "format": "uuid" },
+                        "provider": { "type": "string", "enum": ["pluggy"] },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending_authorization",
+                            "connected",
+                            "partially_available",
+                            "expired",
+                            "revoked",
+                            "disconnected"
+                          ]
+                        },
+                        "consent": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "status",
+                            "products",
+                            "openFinancePermissionsGranted",
+                            "grantedAt",
+                            "expiresAt",
+                            "revokedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": ["granted", "expired", "revoked"],
+                              "nullable": true
+                            },
+                            "products": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "openFinancePermissionsGranted": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "grantedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "expiresAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "revokedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": { "type": "string", "format": "date-time" }
+                      }
                     },
-                    "consent": {
+                    "initialImport": {
                       "type": "object",
                       "additionalProperties": false,
                       "required": [
                         "id",
                         "status",
-                        "products",
-                        "openFinancePermissionsGranted",
-                        "grantedAt",
-                        "expiresAt",
-                        "revokedAt"
+                        "availability",
+                        "accountMapping",
+                        "transactions",
+                        "terminalAt",
+                        "createdAt",
+                        "updatedAt"
                       ],
                       "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
+                        "id": { "type": "string", "format": "uuid" },
                         "status": {
                           "type": "string",
-                          "enum": ["granted", "expired", "revoked"],
-                          "nullable": true
+                          "enum": [
+                            "queued",
+                            "processing",
+                            "awaiting_account_mapping",
+                            "completed",
+                            "completed_with_errors",
+                            "failed"
+                          ]
                         },
-                        "products": {
-                          "type": "array",
-                          "items": { "type": "string" }
+                        "availability": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["accounts", "transactions"],
+                          "properties": {
+                            "accounts": {
+                              "$ref": "#/components/schemas/PluggyDataAvailability"
+                            },
+                            "transactions": {
+                              "$ref": "#/components/schemas/PluggyDataAvailability"
+                            }
+                          }
                         },
-                        "openFinancePermissionsGranted": {
-                          "type": "array",
-                          "items": { "type": "string" }
+                        "accountMapping": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["total", "mapped", "accounts"],
+                          "properties": {
+                            "total": { "type": "integer", "minimum": 0 },
+                            "mapped": { "type": "integer", "minimum": 0 },
+                            "accounts": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/PluggyImportAccount"
+                              }
+                            }
+                          }
                         },
-                        "grantedAt": {
+                        "transactions": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "total",
+                            "imported",
+                            "ignored",
+                            "failed"
+                          ],
+                          "properties": {
+                            "total": { "type": "integer", "minimum": 0 },
+                            "imported": { "type": "integer", "minimum": 0 },
+                            "ignored": { "type": "integer", "minimum": 0 },
+                            "failed": { "type": "integer", "minimum": 0 }
+                          }
+                        },
+                        "terminalAt": {
                           "type": "string",
                           "format": "date-time",
                           "nullable": true
                         },
-                        "expiresAt": {
+                        "createdAt": {
                           "type": "string",
-                          "format": "date-time",
-                          "nullable": true
+                          "format": "date-time"
                         },
-                        "revokedAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true
-                        }
+                        "updatedAt": { "type": "string", "format": "date-time" }
                       }
-                    },
-                    "createdAt": { "type": "string", "format": "date-time" },
-                    "updatedAt": { "type": "string", "format": "date-time" }
+                    }
                   }
                 }
               }
@@ -8086,13 +8185,13 @@
           }
         },
         "security": [{ "auth0": [] }],
-        "summary": "Verify and record a completed Pluggy connection",
+        "summary": "Verify a completed Pluggy connection and accept its initial import",
         "tags": ["connections"]
       }
     },
     "/api/v1/connections/{connectionId}": {
       "get": {
-        "operationId": "PluggyConnectionsController_get",
+        "operationId": "PluggyInitialImportController_get",
         "parameters": [
           {
             "name": "connectionId",
@@ -8113,81 +8212,180 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "id",
-                    "provider",
-                    "status",
-                    "consent",
-                    "createdAt",
-                    "updatedAt"
-                  ],
-                  "properties": {
-                    "id": { "type": "string", "format": "uuid" },
-                    "provider": { "type": "string", "enum": ["pluggy"] },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "pending_authorization",
-                        "connected",
-                        "partially_available",
-                        "expired",
-                        "revoked",
-                        "disconnected"
-                      ]
-                    },
-                    "consent": {
+                  "allOf": [
+                    {
                       "type": "object",
                       "additionalProperties": false,
                       "required": [
                         "id",
+                        "provider",
                         "status",
-                        "products",
-                        "openFinancePermissionsGranted",
-                        "grantedAt",
-                        "expiresAt",
-                        "revokedAt"
+                        "consent",
+                        "createdAt",
+                        "updatedAt"
                       ],
                       "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
+                        "id": { "type": "string", "format": "uuid" },
+                        "provider": { "type": "string", "enum": ["pluggy"] },
                         "status": {
                           "type": "string",
-                          "enum": ["granted", "expired", "revoked"],
-                          "nullable": true
+                          "enum": [
+                            "pending_authorization",
+                            "connected",
+                            "partially_available",
+                            "expired",
+                            "revoked",
+                            "disconnected"
+                          ]
                         },
-                        "products": {
-                          "type": "array",
-                          "items": { "type": "string" }
+                        "consent": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "status",
+                            "products",
+                            "openFinancePermissionsGranted",
+                            "grantedAt",
+                            "expiresAt",
+                            "revokedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": ["granted", "expired", "revoked"],
+                              "nullable": true
+                            },
+                            "products": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "openFinancePermissionsGranted": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "grantedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "expiresAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "revokedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
                         },
-                        "openFinancePermissionsGranted": {
-                          "type": "array",
-                          "items": { "type": "string" }
-                        },
-                        "grantedAt": {
+                        "createdAt": {
                           "type": "string",
-                          "format": "date-time",
-                          "nullable": true
+                          "format": "date-time"
                         },
-                        "expiresAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true
-                        },
-                        "revokedAt": {
-                          "type": "string",
-                          "format": "date-time",
+                        "updatedAt": { "type": "string", "format": "date-time" }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": ["initialImport"],
+                      "properties": {
+                        "initialImport": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "status",
+                            "availability",
+                            "accountMapping",
+                            "transactions",
+                            "terminalAt",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": { "type": "string", "format": "uuid" },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "queued",
+                                "processing",
+                                "awaiting_account_mapping",
+                                "completed",
+                                "completed_with_errors",
+                                "failed"
+                              ]
+                            },
+                            "availability": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": ["accounts", "transactions"],
+                              "properties": {
+                                "accounts": {
+                                  "$ref": "#/components/schemas/PluggyDataAvailability"
+                                },
+                                "transactions": {
+                                  "$ref": "#/components/schemas/PluggyDataAvailability"
+                                }
+                              }
+                            },
+                            "accountMapping": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": ["total", "mapped", "accounts"],
+                              "properties": {
+                                "total": { "type": "integer", "minimum": 0 },
+                                "mapped": { "type": "integer", "minimum": 0 },
+                                "accounts": {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/PluggyImportAccount"
+                                  }
+                                }
+                              }
+                            },
+                            "transactions": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "total",
+                                "imported",
+                                "ignored",
+                                "failed"
+                              ],
+                              "properties": {
+                                "total": { "type": "integer", "minimum": 0 },
+                                "imported": { "type": "integer", "minimum": 0 },
+                                "ignored": { "type": "integer", "minimum": 0 },
+                                "failed": { "type": "integer", "minimum": 0 }
+                              }
+                            },
+                            "terminalAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
                           "nullable": true
                         }
                       }
-                    },
-                    "createdAt": { "type": "string", "format": "date-time" },
-                    "updatedAt": { "type": "string", "format": "date-time" }
-                  }
+                    }
+                  ]
                 }
               }
             }
@@ -8544,7 +8742,7 @@
           }
         },
         "security": [{ "auth0": [] }],
-        "summary": "Get connection and consent state",
+        "summary": "Get Pluggy connection, consent, data availability and initial import state",
         "tags": ["connections"]
       }
     },
@@ -9912,6 +10110,51 @@
           "page": { "type": "integer", "minimum": 1 },
           "pageSize": { "type": "integer", "minimum": 1, "maximum": 100 },
           "total": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "PluggyDataAvailability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "errorCode"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "available", "unavailable", "failed"]
+          },
+          "errorCode": { "type": "string", "nullable": true }
+        }
+      },
+      "PluggyImportAccount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerAccountId",
+          "name",
+          "accountType",
+          "currencyCode",
+          "mappingStatus",
+          "errorCode",
+          "mappedAccountId"
+        ],
+        "properties": {
+          "providerAccountId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "accountType": {
+            "type": "string",
+            "enum": ["checking", "savings", "credit_card"],
+            "nullable": true
+          },
+          "currencyCode": { "type": "string", "minLength": 3, "maxLength": 3 },
+          "mappingStatus": {
+            "type": "string",
+            "enum": ["pending", "mapped", "unsupported"]
+          },
+          "errorCode": { "type": "string", "nullable": true },
+          "mappedAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
         }
       }
     }
