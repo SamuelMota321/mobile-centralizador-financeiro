@@ -9,6 +9,12 @@ import {
   startPluggySession,
 } from "../lib/connections/api";
 import type { Connection } from "../lib/connections/types";
+import {
+  clearConnectionPointer,
+  isConnectionDenied,
+  restoreConnectionPointer,
+  saveConnectionPointer,
+} from "../lib/connections/recovery-store";
 import { newIdempotencyKey } from "../lib/idempotency";
 import { makeStyles, radius, type } from "../theme";
 import { Button, Notice, type NoticeTone, StatusChip } from "../ui/controls";
@@ -52,19 +58,46 @@ type Phase =
   | { kind: "connection"; connection: Connection; notice?: FlowNotice };
 
 /**
- * Conexao com banco pelo Pluggy (Sandbox). O token limitado, o item e a conexao vivem so no
- * estado desta tela; nada e persistido no aparelho. O OAuth abre em WebView dentro do app
+ * Conexao com banco pelo Pluggy (Sandbox). Somente o ID da conexao confirmada e persistido;
+ * token e item ficam nesta tela. O OAuth abre em WebView dentro do app
  * (`forceOauthInBrowser={false}`): o retorno por deep link depende de o backend informar o
  * `oauthRedirectUri` ao criar o token, o que ainda nao acontece.
  */
 export function ConnectScreen({ onCancel, onDone }: Props) {
-  const { handleUnauthorized } = useAuth();
+  const { handleUnauthorized, subject } = useAuth();
   const styles = useStyles();
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const [busy, setBusy] = useState(false);
+  const [retryRecovery, setRetryRecovery] = useState(false);
   // O widget dispara onClose tambem depois do sucesso; so o fechamento sem item e cancelamento.
   const itemReceived = useRef(false);
   const completionInFlight = useRef(false);
+
+  const restore = useCallback(async () => {
+    if (!subject) return;
+    setBusy(true);
+    const result = await restoreConnectionPointer(subject);
+    if (result.kind === "found") {
+      setPhase({ kind: "connection", connection: result.connection });
+      setRetryRecovery(false);
+    } else if (result.kind === "denied") {
+      setPhase({ kind: "intro", notice: { tone: "error", text: "A conexão salva não está disponível. Conecte o banco novamente." } });
+      setRetryRecovery(false);
+    } else if (result.kind === "error") {
+      const failure = classifyConnectionError(result.error, "Não foi possível recuperar a conexão.");
+      if (failure.kind === "unauthorized") {
+        await handleUnauthorized();
+      } else {
+        setPhase({ kind: "intro", notice: { tone: "error", text: failure.message } });
+        setRetryRecovery(true);
+      }
+    }
+    setBusy(false);
+  }, [handleUnauthorized, subject]);
+
+  useEffect(() => {
+    void restore();
+  }, [restore]);
 
   const start = useCallback(async () => {
     setBusy(true);
@@ -92,6 +125,13 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
       setBusy(true);
       try {
         const accepted = await completePluggyConnection(itemId, completionKey);
+        if (subject) {
+          try {
+            await saveConnectionPointer(subject, accepted.connection.id);
+          } catch {
+            // Falha local de armazenamento não altera a conclusão aceita pelo backend.
+          }
+        }
         setPhase({
           kind: "connection",
           connection: { ...accepted.connection, initialImport: accepted.initialImport },
@@ -109,7 +149,7 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
         setBusy(false);
       }
     },
-    [handleUnauthorized],
+    [handleUnauthorized, subject],
   );
 
   const update = useCallback(
@@ -122,6 +162,15 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
         const failure = classifyConnectionError(error, fallback);
         if (failure.kind === "unauthorized") {
           await handleUnauthorized();
+          return;
+        }
+        if (isConnectionDenied(error)) {
+          try {
+            await clearConnectionPointer();
+          } catch {
+            // O backend já negou o acesso; não exibir o detalhe antigo.
+          }
+          setPhase({ kind: "intro", notice: { tone: "error", text: "A conexão não está disponível. Conecte o banco novamente." } });
           return;
         }
         setPhase({ kind: "connection", connection, notice: { tone: "error", text: failure.message } });
@@ -298,7 +347,12 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
       description="Autorize a leitura dos dados de um banco pelo Open Finance, em ambiente de testes (Sandbox)."
       onCancel={onCancel}
       cancelDisabled={busy}
-      footer={<Button label="Conectar banco" onPress={() => void start()} loading={busy} />}
+      footer={
+        <>
+          {retryRecovery ? <Button label="Tentar recuperar" variant="secondary" onPress={() => void restore()} disabled={busy} /> : null}
+          <Button label="Conectar banco" onPress={() => void start()} loading={busy} />
+        </>
+      }
     >
       <View style={styles.section}>
         <Text style={styles.sectionTitle} accessibilityRole="header">

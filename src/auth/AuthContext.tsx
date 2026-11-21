@@ -19,6 +19,7 @@ import {
 } from "./session-store";
 import { setTokenProvider } from "../lib/api/http-client";
 import { SessionEpoch } from "./session-epoch";
+import { clearConnectionPointer, loadConnectionPointer, subjectFromToken } from "../lib/connections/recovery-store";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -26,6 +27,7 @@ type AuthStatus = "loading" | "anonymous" | "authenticated";
 
 interface AuthContextValue {
   status: AuthStatus;
+  subject: string | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Invalida a sessao local. Usado quando o backend recusa o token. */
@@ -40,6 +42,7 @@ const redirectUri = AuthSession.makeRedirectUri({ scheme: auth0Config.scheme });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [subject, setSubject] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,11 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Toda troca de sessão invalida o que a sessão anterior ainda tinha em andamento.
     setSessionNumber(epoch.advance());
     if (session && !isExpired(session)) {
+      setSubject(subjectFromToken(session.accessToken));
       setTokenProvider(() => session.accessToken);
       setStatus("authenticated");
       return;
     }
     setTokenProvider(() => undefined);
+    setSubject(null);
     setStatus("anonymous");
   }, [epoch]);
 
@@ -116,6 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         expiresAt: Date.now() + expiresInSeconds * 1000,
       };
 
+      try {
+        const nextSubject = subjectFromToken(tokens.accessToken);
+        if (nextSubject) await loadConnectionPointer(nextSubject);
+        else await clearConnectionPointer();
+      } catch {
+        // A nova sessão ainda deve ser salva; o GET do backend confere o proprietário.
+      }
       await saveSession(session);
       applySession(session);
     } catch {
@@ -126,6 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession, discovery]);
 
   const signOut = useCallback(async () => {
+    try {
+      await clearConnectionPointer();
+    } catch {
+      // O logout da sessão deve prosseguir mesmo se o armazenamento falhar.
+    }
     await clearSession();
     applySession(null);
 
@@ -149,13 +166,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const handleUnauthorized = useCallback(async () => {
     if (!epoch.isCurrent(sessionNumber)) return;
+    try {
+      await clearConnectionPointer();
+    } catch {
+      // O token recusado ainda precisa ser removido.
+    }
     await clearSession();
     applySession(null);
   }, [applySession, epoch, sessionNumber]);
 
   const value = useMemo(
-    () => ({ status, signIn, signOut, handleUnauthorized, signingIn, error }),
-    [status, signIn, signOut, handleUnauthorized, signingIn, error],
+    () => ({ status, subject, signIn, signOut, handleUnauthorized, signingIn, error }),
+    [status, subject, signIn, signOut, handleUnauthorized, signingIn, error],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
