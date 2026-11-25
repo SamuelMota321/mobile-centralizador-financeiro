@@ -15,7 +15,7 @@ import type { CategoryRule } from "../lib/category-rules/types";
 import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
 import { IconCategories, IconPlus, IconRules } from "../ui/icons";
-import { AppScreen, type Section, useListStyles } from "../ui/screens";
+import { AppScreen, useListStyles, useSectionNavigation } from "../ui/screens";
 import { PAGE_SIZE } from "./movement-presentation";
 import { RuleFormScreen } from "./RuleFormScreen";
 import {
@@ -43,7 +43,8 @@ function appendRules(current: CategoryRule[], next: CategoryRule[]): CategoryRul
   return [...current, ...next.filter((item) => !seen.has(item.id))];
 }
 
-export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function RulesScreen() {
+  const onNavigate = useSectionNavigation();
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
@@ -262,7 +263,6 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
   return (
     <AppScreen
       section="regras"
-      onNavigate={onNavigate}
       title="Regras"
       subtitle={subtitle}
       footer={

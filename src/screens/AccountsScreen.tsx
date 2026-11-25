@@ -14,7 +14,7 @@ import { formatMoney } from "../lib/money";
 import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
 import { IconAccounts, IconPlus } from "../ui/icons";
-import { AppScreen, type Section, useListStyles } from "../ui/screens";
+import { AppScreen, useListStyles } from "../ui/screens";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 import { AccountFormScreen } from "./AccountFormScreen";
 import { ConnectScreen } from "./ConnectScreen";
@@ -35,7 +35,7 @@ interface NoticeState {
   text: string;
 }
 
-export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function AccountsScreen() {
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
@@ -158,7 +158,6 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
   return (
     <AppScreen
       section="contas"
-      onNavigate={onNavigate}
       title="Contas"
       subtitle={subtitle}
       footer={

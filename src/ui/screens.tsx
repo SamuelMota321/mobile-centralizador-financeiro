@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
 import { makeStyles, radius, type, useTheme } from "../theme";
@@ -23,6 +24,12 @@ import {
 
 export type Section = "movimentacoes" | "contas" | "categorias" | "regras";
 
+/** Cada seção é uma rota de `app/(app)/`; trocar de seção não empilha telas. */
+export function useSectionNavigation(): (section: Section) => void {
+  const router = useRouter();
+  return (section) => router.replace(`/${section}`);
+}
+
 const TABS = [
   { section: "movimentacoes", label: "Movimentações", Icon: IconMovements },
   { section: "contas", label: "Contas", Icon: IconAccounts },
@@ -36,14 +43,12 @@ const TABS = [
  */
 export function AppScreen({
   section,
-  onNavigate,
   title,
   subtitle,
   children,
   footer,
 }: {
   section: Section;
-  onNavigate: (section: Section) => void;
   title: string;
   subtitle?: string;
   children: ReactNode;
@@ -54,6 +59,7 @@ export function AppScreen({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
+  const onNavigate = useSectionNavigation();
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>

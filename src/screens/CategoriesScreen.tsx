@@ -7,7 +7,7 @@ import type { Category } from "../lib/categories/types";
 import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
 import { IconCategories, IconPlus } from "../ui/icons";
-import { AppScreen, type Section, useListStyles } from "../ui/screens";
+import { AppScreen, useListStyles } from "../ui/screens";
 import { CATEGORY_STATUS_LABELS, classifyCategoryError } from "./category-logic";
 import { CategoryFormScreen } from "./CategoryFormScreen";
 import { PAGE_SIZE } from "./movement-presentation";
@@ -28,7 +28,7 @@ function appendCategories(current: Category[], next: Category[]): Category[] {
   return [...current, ...next.filter((item) => !seen.has(item.id))];
 }
 
-export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function CategoriesScreen() {
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
@@ -163,7 +163,6 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
   return (
     <AppScreen
       section="categorias"
-      onNavigate={onNavigate}
       title="Categorias"
       subtitle={subtitle}
       footer={

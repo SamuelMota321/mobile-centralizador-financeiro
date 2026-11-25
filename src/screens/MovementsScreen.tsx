@@ -25,7 +25,7 @@ import {
   IconPlus,
   IconTransfer,
 } from "../ui/icons";
-import { AppScreen, type Section, useListStyles } from "../ui/screens";
+import { AppScreen, useListStyles, useSectionNavigation } from "../ui/screens";
 import { CategorizeScreen } from "./CategorizeScreen";
 import { MovementFormScreen } from "./MovementFormScreen";
 import {
@@ -76,7 +76,8 @@ async function fetchCategories(): Promise<{ items: CategoryOption[]; truncated: 
   };
 }
 
-export function MovementsScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function MovementsScreen() {
+  const onNavigate = useSectionNavigation();
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
@@ -259,7 +260,6 @@ export function MovementsScreen({ onNavigate }: { onNavigate: (section: Section)
   return (
     <AppScreen
       section="movimentacoes"
-      onNavigate={onNavigate}
       title="Movimentações"
       subtitle={subtitle}
       footer={
