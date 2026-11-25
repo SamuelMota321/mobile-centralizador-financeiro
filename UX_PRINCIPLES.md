@@ -1,8 +1,8 @@
 # Princípios de UX — Coinciente (mobile)
 
 Consolida padrões de experiência já implementados no app, espalhados hoje entre `PRODUCT.md` e `DESIGN.md`.
-Não redefine tokens visuais — isso é `DESIGN.md`. Fonte para as skills `ux-critic` e `visual-audit`, e para
-qualquer tela nova.
+Não redefine tokens visuais — isso é `DESIGN.md`. Fonte para as skills `ux-critic` e `visual-audit`
+(em `documentacao-centralizador-financeiro/.agents/skills/`), e para qualquer tela nova.
 
 ## Hierarquia e ações
 
@@ -33,8 +33,17 @@ qualquer tela nova.
 
 ## Divulgação progressiva
 
-- Criar/editar abre em `FormScreen` de tela cheia — nunca um modal pequeno sobre a lista.
+- Criar/editar abre em `FormScreen` de tela cheia — nunca um modal pequeno sobre a lista. Planejado
+  (ADR-003): formulários longos continuam em tela cheia, na pilha; tarefas curtas, como categorizar, abrem em
+  folha inferior.
 - Voltar do Android e "Cancelar" no topo do formulário fazem a mesma coisa: fecha sem salvar.
+
+## Movimento
+
+- Anima só o que explica causa, mudança de estado ou de onde algo veio; nada que se repete dezenas de vezes por dia.
+- Valores financeiros nunca se movem, contam ou crescem.
+- Movimento reduzido não é zero: sai o deslocamento, ficam as mudanças de opacidade. Tabela em `DESIGN.md`;
+  princípios na seção Movimento do Style Guide 2.0.
 
 ## Plataforma
 
@@ -45,7 +54,8 @@ qualquer tela nova.
 
 ## Consistência
 
-- Mesmo vocabulário de rótulo de estado (`categorizationLabel`, `StatusChip`) em toda tela.
+- Mesmo vocabulário de rótulo de estado (`categorizationLabel` + marcador; `StatusChip` até a aplicação da 2.0) em toda tela.
+- Proveniência como linha de metadados (`Origem · ref. DD/MM · Conta`) logo abaixo do dado.
 - Data sempre DD/MM/AAAA digitada com máscara, nunca o seletor nativo do sistema.
 
 ## TODO
