@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isUnauthorized } from "../lib/accounts/messages";
 import { connectionErrorMessage } from "../lib/connections/messages";
+import type { InitialImport } from "../lib/connections/schema";
 import type { Connection, ConnectionStatus } from "../lib/connections/types";
 import type { ChipTone, NoticeTone } from "../ui/controls";
 
@@ -76,6 +77,26 @@ export function productLabel(product: string): string {
 /** "Verificar de novo" so faz sentido enquanto o banco nao respondeu a autorizacao. */
 export function canCheckAgain(status: ConnectionStatus): boolean {
   return status === "pending_authorization";
+}
+
+export function canRefreshInitialImport(status: InitialImport["status"] | undefined): boolean {
+  return status === "queued" || status === "processing" || status === "awaiting_account_mapping";
+}
+
+export function initialImportStatus(status: InitialImport["status"]): { tone: NoticeTone; message: string } {
+  switch (status) {
+    case "queued":
+    case "processing":
+      return { tone: "info", message: "A importação inicial está em andamento." };
+    case "awaiting_account_mapping":
+      return { tone: "warning", message: "A importação inicial aguarda o mapeamento de contas." };
+    case "completed":
+      return { tone: "success", message: "A importação inicial foi concluída." };
+    case "completed_with_errors":
+      return { tone: "warning", message: "A importação inicial terminou com erros." };
+    case "failed":
+      return { tone: "error", message: "A importação inicial falhou." };
+  }
 }
 
 /** Remover para a coleta; uma conexao ja desconectada nao tem o que remover. */

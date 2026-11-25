@@ -104,8 +104,10 @@ O `.env` é ignorado pelo git. Nunca coloque credenciais reais.
 No painel do Auth0, registre uma aplicação do tipo **Native** (PKCE, sem client secret) e
 adicione tanto em *Allowed Callback URLs* quanto em *Allowed Logout URLs*:
 
-- `coinciente://*`
-- no Expo Go, também a URL `exp://...` que o `pnpm start` imprime no terminal
+- `coinciente://auth` para a versão Android instalada para testes
+
+Para testar o login no aparelho, instale a versão Android do app com
+`pnpm exec expo run:android --device`.
 
 Preencha no `.env`:
 

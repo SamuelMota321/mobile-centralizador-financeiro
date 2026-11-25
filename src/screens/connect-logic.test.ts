@@ -6,9 +6,11 @@ import { connectionSchema } from "../lib/connections/schema";
 import {
   canCheckAgain,
   canDisconnect,
+  canRefreshInitialImport,
   classifyConnectionError,
   consentSummary,
   formatTimestamp,
+  initialImportStatus,
   needsReconnect,
   productLabel,
   itemIdFromSuccess,
@@ -49,6 +51,31 @@ describe("ações disponíveis por estado", () => {
 
   it("oferece conectar de novo quando a coleta parou", () => {
     expect(CONNECTION_STATUSES.filter(needsReconnect)).toEqual(["expired", "revoked", "disconnected"]);
+  });
+});
+
+describe("estados da importação inicial", () => {
+  it.each(["queued", "processing", "awaiting_account_mapping"] as const)(
+    "permite verificar de novo quando está em %s",
+    (status) => {
+      expect(canRefreshInitialImport(status)).toBe(true);
+      expect(initialImportStatus(status).message).toBeTruthy();
+    },
+  );
+
+  it.each(["completed", "completed_with_errors", "failed", undefined] as const)(
+    "encerra a atualização da importação em %s",
+    (status) => expect(canRefreshInitialImport(status)).toBe(false),
+  );
+
+  it("explica a espera pelo mapeamento e os resultados ao usuário", () => {
+    expect(initialImportStatus("awaiting_account_mapping")).toMatchObject({
+      tone: "warning",
+      message: expect.stringContaining("mapeamento"),
+    });
+    expect(initialImportStatus("completed").tone).toBe("success");
+    expect(initialImportStatus("completed_with_errors").tone).toBe("warning");
+    expect(initialImportStatus("failed").tone).toBe("error");
   });
 });
 

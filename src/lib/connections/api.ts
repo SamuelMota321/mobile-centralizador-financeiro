@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { apiRequest } from "../api/http-client";
 import { toProblemError } from "../api/problem-error";
-import { completeConnectionInputSchema, connectionSchema, pluggySessionSchema } from "./schema";
-import type { Connection, PluggySession } from "./types";
-
-// Rotas do OpenAPI do backend (@ 605cb07). Nenhuma exige Idempotency-Key: a conclusao
-// reaplica o estado do item no backend, entao reenviar o mesmo itemId e seguro.
+import {
+  completeConnectionInputSchema,
+  completionAcceptedSchema,
+  connectionDetailSchema,
+  connectionSchema,
+  pluggySessionSchema,
+} from "./schema";
+import type { CompletionAccepted, Connection, PluggySession } from "./types";
 
 const uuidSchema = z.uuid();
 
@@ -19,12 +22,17 @@ export async function startPluggySession(): Promise<PluggySession> {
   }
 }
 
-/** POST /api/v1/connections/pluggy/completions — o backend confere o item e o liga ao tenant. */
-export async function completePluggyConnection(itemId: string): Promise<Connection> {
+/** POST /api/v1/connections/pluggy/completions — aceita a importação inicial com 202. */
+export async function completePluggyConnection(itemId: string, idempotencyKey: string): Promise<CompletionAccepted> {
   const body = completeConnectionInputSchema.parse({ itemId });
+  const key = uuidSchema.parse(idempotencyKey);
   try {
-    const raw = await apiRequest<unknown>("/connections/pluggy/completions", { method: "POST", body });
-    return connectionSchema.parse(raw);
+    const raw = await apiRequest<unknown>("/connections/pluggy/completions", {
+      method: "POST",
+      body,
+      idempotencyKey: key,
+    });
+    return completionAcceptedSchema.parse(raw);
   } catch (error) {
     throw toProblemError(error);
   }
@@ -35,7 +43,7 @@ export async function getConnection(connectionId: string): Promise<Connection> {
   const id = uuidSchema.parse(connectionId);
   try {
     const raw = await apiRequest<unknown>(`/connections/${id}`, { method: "GET" });
-    return connectionSchema.parse(raw);
+    return connectionDetailSchema.parse(raw);
   } catch (error) {
     throw toProblemError(error);
   }

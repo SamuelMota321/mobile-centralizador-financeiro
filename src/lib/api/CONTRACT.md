@@ -17,26 +17,25 @@ com o backend depende da revisão e da operação comparadas.
 
 ### Pluggy
 
-O [snapshot mobile](openapi.snapshot.json) entrou em `3440ca6` e corresponde
-integralmente ao OpenAPI de `605cb07`. O backend vigente tem 40 operações.
-Das 28 presentes no snapshot, 26 mantêm a mesma definição. As duas alterações
-são a conclusão e o detalhe da conexão.
+O [snapshot mobile](openapi.snapshot.json) partiu do OpenAPI de `605cb07`.
+A correção B01 atualiza a conclusão e o detalhe da conexão a partir do backend
+`b9f6a7a`, incluindo os componentes `PluggyDataAvailability` e
+`PluggyImportAccount`. As 28 operações presentes no snapshot coincidem com as
+correspondentes do OpenAPI dessa revisão. O backend publica 40 operações.
 
 | Operação em `/api/v1` | Resposta publicada no backend vigente | Consumo mobile |
 |---|---|---|
 | `POST /connections/pluggy/sessions` | `201` com conexão, Connect Token e vencimento | Compatível no recorte verificado. |
-| `POST /connections/pluggy/completions` | `202` com `connection` e `initialImport`. `Idempotency-Key` obrigatória. | Bloqueado. O mobile envia só `itemId`. O controller rejeita a falta da chave com `400`. O parser espera uma conexão no corpo e o teste local fixa `200` sem chave. |
-| `GET /connections/{connectionId}` | `200` com detalhe e `initialImport` anulável | O schema antigo lê a conexão e descarta `initialImport`. A tela não acompanha o run inicial. |
+| `POST /connections/pluggy/completions` | `202` com `connection` e `initialImport`. `Idempotency-Key` obrigatória. | O mobile envia `itemId` com a chave da sessão e valida o envelope de aceitação. **Tentar de novo** repete o mesmo par. |
+| `GET /connections/{connectionId}` | `200` com detalhe e `initialImport` anulável | O mobile valida o campo e mostra o estado da importação separado do consentimento. **Verificar de novo** atualiza a consulta durante o andamento. |
 | `POST /connections/{connectionId}/disconnect` | `200` com conexão | Compatível no recorte verificado. |
 | `PUT /connections/{connectionId}/accounts/{providerAccountId}/mapping` | `200` com `accountId` e `initialImport` atualizado. Corpo `link` com `accountId` ou `create`. | Bloqueado no mobile. Snapshot, API e tela ainda não oferecem mapeamento. |
 
-**Encaminhamento ao Dev 2.** Gerar uma `Idempotency-Key` por conclusão Pluggy
-e reaproveitar a mesma chave com o mesmo `itemId` em retries. Alinhar schema,
-tratamento do `202` e consulta de `initialImport`. Cobrir em tarefa própria o
-mapeamento explícito e o acompanhamento de `queued`, `processing`,
-`awaiting_account_mapping`, `completed`, `completed_with_errors` e `failed`,
-além da disponibilidade separada de contas e transações. A evidência estática
-fica na auditoria atual do Dev 3, achados B01 e P02-01.
+**B01.** A tela acompanha `queued`, `processing`, `awaiting_account_mapping`,
+`completed`, `completed_with_errors` e `failed`. O schema preserva a
+disponibilidade separada de contas e transações. A confirmação da jornada em
+dispositivo com Sandbox está pendente. Vincular ou criar contas durante
+`awaiting_account_mapping` pertence à etapa de mapeamento P02-01.
 
 Para uma movimentação manual, `MovementFormScreen` já cria um UUID com
 `expo-crypto` e o envia no `POST /transactions`. As movimentações coletadas pelo

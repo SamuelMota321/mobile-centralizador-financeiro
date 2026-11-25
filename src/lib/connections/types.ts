@@ -1,6 +1,6 @@
-// Alinhado a POST /connections/pluggy/sessions, POST /connections/pluggy/completions,
-// GET /connections/{id} e POST /connections/{id}/disconnect do OpenAPI do backend (@ 605cb07).
-// Schemas inline; transcrito a mao.
+import type { InitialImport } from "./schema";
+
+// Tipos das operações de conexão consumidas pelo app.
 
 export const CONNECTION_STATUSES = [
   "pending_authorization",
@@ -34,6 +34,7 @@ export interface Connection {
   consent: Consent;
   createdAt: string;
   updatedAt: string;
+  initialImport?: InitialImport | null;
 }
 
 /** Sessao de conexao: o token limitado abre o widget e expira (30 min no backend). */
@@ -41,4 +42,9 @@ export interface PluggySession {
   connection: Connection;
   connectToken: string;
   expiresAt: string;
+}
+
+export interface CompletionAccepted {
+  connection: Connection;
+  initialImport: InitialImport;
 }

@@ -9,6 +9,7 @@ import {
 } from "react";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
 import { auth0Config } from "./config";
 import {
   clearSession,
@@ -36,7 +37,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const redirectUri = AuthSession.makeRedirectUri({ scheme: auth0Config.scheme });
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: auth0Config.scheme,
+  path: Platform.OS === "web" ? undefined : "auth",
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
