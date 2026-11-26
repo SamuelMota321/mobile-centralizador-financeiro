@@ -22,9 +22,11 @@ import {
   formatTimestamp,
   initialImportStatus,
   itemIdFromSuccess,
+  needsAccountMapping,
   needsReconnect,
   statusView,
 } from "./connect-logic";
+import { AccountMappingSection } from "./AccountMappingSection";
 
 interface Props {
   onCancel: () => void;
@@ -285,6 +287,15 @@ export function ConnectScreen({ onCancel, onDone }: Props) {
           <SummaryRow label="Última atualização" value={formatTimestamp(connection.updatedAt)} />
         </View>
         {importView ? <Notice tone={importView.tone} text={importView.message} /> : null}
+        {needsAccountMapping(connection.initialImport) ? (
+          <AccountMappingSection
+            connectionId={connection.id}
+            initialImport={connection.initialImport}
+            onMapped={(initialImport, message) =>
+              setPhase({ kind: "connection", connection: { ...connection, initialImport }, notice: { tone: "success", text: message } })
+            }
+          />
+        ) : null}
       </FormScreen>
     );
   }

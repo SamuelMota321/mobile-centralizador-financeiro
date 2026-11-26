@@ -68,3 +68,35 @@ export function initialImportView(status: InitialImport["status"] = "queued") {
 export function completionAcceptedView() {
   return { connection: connectionView(), initialImport: initialImportView() };
 }
+
+export const PROVIDER_ACCOUNT_ID = "3c1d2e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+export const LOCAL_ACCOUNT_ID = "6f7e8d9c-0b1a-4f2e-9d3c-4b5a6f7e8d9c";
+
+/** Importação parada à espera de mapeamento: uma conta pendente, uma mapeada e uma sem suporte. */
+export function awaitingMappingImportView() {
+  return {
+    ...initialImportView("awaiting_account_mapping"),
+    availability: {
+      accounts: { status: "available", errorCode: null },
+      transactions: { status: "pending", errorCode: null },
+    },
+    accountMapping: {
+      total: 3,
+      mapped: 1,
+      accounts: [
+        { providerAccountId: PROVIDER_ACCOUNT_ID, name: "Conta Corrente Sandbox", accountType: "checking", currencyCode: "BRL", mappingStatus: "pending", errorCode: null, mappedAccountId: null },
+        { providerAccountId: "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d", name: "Cartão Sandbox", accountType: "credit_card", currencyCode: "BRL", mappingStatus: "mapped", errorCode: null, mappedAccountId: LOCAL_ACCOUNT_ID },
+        { providerAccountId: "1b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e", name: "Investimento Sandbox", accountType: null, currencyCode: "BRL", mappingStatus: "unsupported", errorCode: "UNSUPPORTED_ACCOUNT_TYPE", mappedAccountId: null },
+      ],
+    },
+  };
+}
+
+export function accountMappingResultView() {
+  return {
+    connectionId: CONNECTION_ID,
+    providerAccountId: PROVIDER_ACCOUNT_ID,
+    accountId: LOCAL_ACCOUNT_ID,
+    initialImport: { ...initialImportView("processing"), accountMapping: { total: 1, mapped: 1, accounts: [] } },
+  };
+}

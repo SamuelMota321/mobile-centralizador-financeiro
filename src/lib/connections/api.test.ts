@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProblemDetailsError } from "../api/errors";
 import { setTokenProvider } from "../api/http-client";
-import { completePluggyConnection, disconnectConnection, getConnection, startPluggySession } from "./api";
+import { completePluggyConnection, disconnectConnection, getConnection, mapPluggyAccount, startPluggySession } from "./api";
 import {
+  accountMappingResultView,
+  LOCAL_ACCOUNT_ID,
+  PROVIDER_ACCOUNT_ID,
   COMPLETION_KEY,
   CONNECT_TOKEN,
   CONNECTION_ID,
@@ -153,5 +156,37 @@ describe("getConnection e disconnectConnection", () => {
     await expect(getConnection("../x")).rejects.toThrow();
     await expect(disconnectConnection("../x")).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("mapPluggyAccount", () => {
+  it("vincula a conta do banco a uma conta existente com PUT", async () => {
+    const fetchMock = stubFetch(200, accountMappingResultView());
+    const result = await mapPluggyAccount(CONNECTION_ID, PROVIDER_ACCOUNT_ID, { action: "link", accountId: LOCAL_ACCOUNT_ID });
+
+    const call = lastCall(fetchMock);
+    expect(call.url).toBe(`${BASE}/connections/${CONNECTION_ID}/accounts/${PROVIDER_ACCOUNT_ID}/mapping`);
+    expect(call.init.method).toBe("PUT");
+    expect(JSON.parse(String(call.init.body))).toEqual({ action: "link", accountId: LOCAL_ACCOUNT_ID });
+    expect(result.initialImport.status).toBe("processing");
+  });
+
+  it("pede a criação só com a ação", async () => {
+    const fetchMock = stubFetch(200, accountMappingResultView());
+    await mapPluggyAccount(CONNECTION_ID, PROVIDER_ACCOUNT_ID, { action: "create" });
+    expect(JSON.parse(String(lastCall(fetchMock).init.body))).toEqual({ action: "create" });
+  });
+
+  it("recusa ids e escolhas inválidos antes de chamar o backend", async () => {
+    const fetchMock = stubFetch(200, accountMappingResultView());
+    await expect(mapPluggyAccount("../x", PROVIDER_ACCOUNT_ID, { action: "create" })).rejects.toThrow();
+    await expect(mapPluggyAccount(CONNECTION_ID, PROVIDER_ACCOUNT_ID, { action: "link", accountId: "x" })).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("converte o conflito em ProblemDetailsError", async () => {
+    stubFetch(409, problemBody(409, "CONNECTION_CONFLICT"));
+    const error = await mapPluggyAccount(CONNECTION_ID, PROVIDER_ACCOUNT_ID, { action: "create" }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ProblemDetailsError);
   });
 });
