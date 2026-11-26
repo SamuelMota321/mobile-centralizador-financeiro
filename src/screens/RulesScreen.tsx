@@ -225,7 +225,8 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
 
   // Só exibição: as regras do pacote ficam num grupo recolhido; as da pessoa aparecem abertas.
   const { personal, suggested, suggestedCount } = splitSuggestedRules(items, categories);
-  const missingFromPack = categories ? rulesToCreate(categories, items).toCreate.length : 0;
+  const pack = categories ? rulesToCreate(categories, items) : null;
+  const missingFromPack = pack?.toCreate.length ?? 0;
 
   const renderRule = (item: CategoryRule, first: boolean, last: boolean) => {
             const removed = item.status === "removed";
@@ -389,6 +390,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
                   groups={suggested}
                   count={suggestedCount}
                   missing={missingFromPack}
+                  missingCategories={pack?.missingCategories ?? []}
                   renderRule={renderRule}
                 />
               ) : null}

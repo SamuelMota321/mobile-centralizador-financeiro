@@ -15,6 +15,10 @@ describe("categoriesToCreate", () => {
     expect(result).toHaveLength(SUGGESTED_CATEGORIES.length - 2);
   });
 
+  it("conjunto completo não deixa nada faltando (o aviso some)", () => {
+    expect(categoriesToCreate(SUGGESTED_CATEGORIES.map((name) => ({ name })))).toEqual([]);
+  });
+
   it("nome com caixa diferente é outro nome para o banco", () => {
     expect(categoriesToCreate([{ name: "mercado" }])).toContain("Mercado");
   });

@@ -17,8 +17,10 @@ export function RulePackSection({
   groups,
   count,
   missing,
+  missingCategories,
   renderRule,
 }: {
+  missingCategories: readonly string[];
   canApply: boolean;
   applying: boolean;
   onApply: () => void;
@@ -50,6 +52,14 @@ export function RulePackSection({
             />
           ) : null}
           {!canApply ? <Button label="Criar as categorias primeiro" variant="text" onPress={onGoToCategories} /> : null}
+          {canApply && missingCategories.length > 0 ? (
+            <>
+              <Text style={styles.text}>
+                {`As regras de ${missingCategories.join(", ")} dependem de categorias que você ainda não tem.`}
+              </Text>
+              <Button label="Adicionar categorias sugeridas" variant="text" onPress={onGoToCategories} />
+            </>
+          ) : null}
 
           {groups.length > 0
             ? groups.map((group) => {

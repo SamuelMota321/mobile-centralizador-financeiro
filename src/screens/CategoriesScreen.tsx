@@ -4,7 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 import { isUnauthorized } from "../lib/accounts/messages";
 import { deactivateCategory, listCategories } from "../lib/categories/api";
 import { createSuggestedCategories } from "../lib/categories/apply-suggestions";
-import { SUGGESTED_CATEGORIES } from "../lib/categories/suggestions";
+import { categoriesToCreate, SUGGESTED_CATEGORIES } from "../lib/categories/suggestions";
+import { listAllPages } from "../lib/api/pagination";
 import type { Category } from "../lib/categories/types";
 import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
@@ -44,12 +45,18 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [suggesting, setSuggesting] = useState(false);
+  // Sugeridas que faltam para quem já tem categorias; vazio quando completo ou se a lista falhar.
+  const [missingSuggested, setMissingSuggested] = useState<string[]>([]);
   // Categoria com arquivamento em andamento: bloqueia toque duplo.
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const first = await listCategories({ page: 1, pageSize: PAGE_SIZE });
+      const [first, allNames] = await Promise.all([
+        listCategories({ page: 1, pageSize: PAGE_SIZE }),
+        listAllPages((query) => listCategories(query)).catch(() => null),
+      ]);
+      setMissingSuggested(first.total > 0 && allNames ? categoriesToCreate(allNames.items) : []);
       setItems(first.items);
       setTotal(first.total);
       setPage(1);
@@ -65,6 +72,7 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
 
   // Atalho opcional: cria o conjunto básico, que depois pertence à pessoa. Repetir é seguro.
   const applySuggested = useCallback(async () => {
+    if (suggesting) return;
     setSuggesting(true);
     const result = await createSuggestedCategories();
     setSuggesting(false);
@@ -78,7 +86,7 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
         : { tone: "error", text: `Não foi possível criar todas as sugeridas. ${result.created > 0 ? `${result.created} entraram; ` : ""}toque de novo para criar as que faltam.` },
     );
     await load();
-  }, [handleUnauthorized, load]);
+  }, [handleUnauthorized, load, suggesting]);
 
   useEffect(() => {
     void load();
@@ -202,6 +210,19 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
             tone={notice.tone}
             text={notice.text}
             action={{ label: "Fechar", onPress: () => setNotice(null) }}
+          />
+        </View>
+      ) : null}
+
+      {state === "ready" && missingSuggested.length > 0 ? (
+        <View style={list.notices}>
+          <Notice
+            tone="info"
+            text={`${missingSuggested.length === 1 ? "Falta 1 categoria sugerida" : `Faltam ${missingSuggested.length} categorias sugeridas`}: ${missingSuggested.join(", ")}.`}
+            action={{
+              label: suggesting ? "Criando…" : missingSuggested.length === 1 ? "Adicionar a que falta" : `Adicionar as ${missingSuggested.length} que faltam`,
+              onPress: () => void applySuggested(),
+            }}
           />
         </View>
       ) : null}
