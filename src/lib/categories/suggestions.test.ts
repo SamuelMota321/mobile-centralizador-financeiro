@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriesToCreate, RULE_PACK, rulePackSize, rulesToCreate, SUGGESTED_CATEGORIES } from "./suggestions";
+import { categoriesToCreate, RULE_PACK, rulePackSize, rulesToCreate, splitSuggestedRules, SUGGESTED_CATEGORIES } from "./suggestions";
 
 const ACTIVE = "active" as const;
 
@@ -60,5 +60,42 @@ describe("pacote", () => {
     const values = RULE_PACK.flatMap((group) => group.values.map((value) => value.toLowerCase()));
     expect(new Set(values).size).toBe(values.length);
     expect(rulePackSize()).toBe(values.length);
+  });
+});
+
+describe("splitSuggestedRules", () => {
+  const categories = [
+    { id: "c-transp", name: "Transporte" },
+    { id: "c-saude", name: "Saude" },
+    { id: "c-outra", name: "Viagens" },
+  ];
+  const rule = (categoryId: string, conditionValue: string, extra: Partial<{ conditionField: string; conditionOperator: string; status: string }> = {}) => ({
+    categoryId,
+    conditionValue,
+    conditionField: "description",
+    conditionOperator: "contains",
+    status: "active",
+    ...extra,
+  });
+
+  it("separa as sugeridas por categoria, na ordem do pacote", () => {
+    const rules = [rule("c-saude", "Drogaria"), rule("c-transp", "uber"), rule("c-transp", "pedágio")];
+    const { personal, suggested, suggestedCount } = splitSuggestedRules(rules, categories);
+    expect(personal).toEqual([]);
+    expect(suggested.map((group) => group.category)).toEqual(["Transporte", "Saúde"]);
+    expect(suggested[0].rules.map((item) => item.conditionValue)).toEqual(["uber", "pedágio"]);
+    expect(suggestedCount).toBe(3);
+  });
+
+  it("regra editada para outro termo, categoria ou operador é da pessoa", () => {
+    const rules = [rule("c-transp", "uber centro"), rule("c-outra", "uber"), rule("c-transp", "uber", { conditionOperator: "equals" })];
+    const { personal, suggestedCount } = splitSuggestedRules(rules, categories);
+    expect(personal).toHaveLength(3);
+    expect(suggestedCount).toBe(0);
+  });
+
+  it("removidas continuam no grupo, e sem lista de categorias tudo é da pessoa", () => {
+    expect(splitSuggestedRules([rule("c-transp", "uber", { status: "removed" })], categories).suggestedCount).toBe(1);
+    expect(splitSuggestedRules([rule("c-transp", "uber")], null).personal).toHaveLength(1);
   });
 });

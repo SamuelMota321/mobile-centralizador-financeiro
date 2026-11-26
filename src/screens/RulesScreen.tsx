@@ -6,6 +6,7 @@ import { isUnauthorized } from "../lib/accounts/messages";
 import { listAllPages } from "../lib/api/pagination";
 import { listCategories } from "../lib/categories/api";
 import { applyRulePack } from "../lib/categories/apply-suggestions";
+import { rulesToCreate, splitSuggestedRules } from "../lib/categories/suggestions";
 import {
   activateCategoryRule,
   deactivateCategoryRule,
@@ -17,7 +18,6 @@ import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
 import { IconCategories, IconPlus, IconRules } from "../ui/icons";
 import { AppScreen, type Section, useListStyles } from "../ui/screens";
-import { PAGE_SIZE } from "./movement-presentation";
 import { RuleFormScreen } from "./RuleFormScreen";
 import { RulePackSection } from "./RulePackSection";
 import {
@@ -40,10 +40,6 @@ interface NoticeState {
 }
 
 /** Acrescenta a próxima página sem repetir ids deslocados por uma criação recente. */
-function appendRules(current: CategoryRule[], next: CategoryRule[]): CategoryRule[] {
-  const seen = new Set(current.map((item) => item.id));
-  return [...current, ...next.filter((item) => !seen.has(item.id))];
-}
 
 export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
   const { handleUnauthorized } = useAuth();
@@ -51,13 +47,11 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
   const list = useListStyles();
   const { colors } = useTheme();
   const [items, setItems] = useState<CategoryRule[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [truncated, setTruncated] = useState(false);
   const [state, setState] = useState<LoadState>("loading");
   const [categories, setCategories] = useState<CategoryOption[] | null>(null);
   const [accounts, setAccounts] = useState<NamedOption[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [applyingPack, setApplyingPack] = useState(false);
@@ -66,7 +60,8 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
 
   const load = useCallback(async () => {
     const [rulesResult, categoriesResult, accountsResult] = await Promise.allSettled([
-      listCategoryRules({ page: 1, pageSize: PAGE_SIZE }),
+      // Todas as regras (até 500): as sugeridas são agrupadas, o que pede a lista inteira.
+      listAllPages((query) => listCategoryRules(query)),
       listAllPages((query) => listCategories(query)),
       listAllPages((query) => listAccounts(query)),
     ]);
@@ -96,8 +91,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
       return;
     }
     setItems(rulesResult.value.items);
-    setTotal(rulesResult.value.total);
-    setPage(1);
+    setTruncated(rulesResult.value.truncated);
     setState("ready");
   }, [handleUnauthorized]);
 
@@ -132,27 +126,6 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
     await load();
     setRefreshing(false);
   }, [load]);
-
-  const hasMore = page * PAGE_SIZE < total;
-
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await listCategoryRules({ page: page + 1, pageSize: PAGE_SIZE });
-      setItems((current) => appendRules(current, next.items));
-      setTotal(next.total);
-      setPage(next.page);
-    } catch (error) {
-      if (isUnauthorized(error)) {
-        await handleUnauthorized();
-        return;
-      }
-      setNotice({ tone: "error", text: "Não foi possível carregar mais regras." });
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [handleUnauthorized, hasMore, loadingMore, page]);
 
   /** Ativar, desativar e remover: a lista só muda depois que a API confirma. */
   const runLifecycle = useCallback(
@@ -246,9 +219,70 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
   const subtitle =
     state !== "ready"
       ? undefined
-      : total === 0
+      : items.length === 0
         ? "Categorize automaticamente as próximas movimentações."
-        : `${total} ${total === 1 ? "regra" : "regras"} · da maior para a menor prioridade`;
+        : `${items.length} ${items.length === 1 ? "regra" : "regras"} · da maior para a menor prioridade`;
+
+  // Só exibição: as regras do pacote ficam num grupo recolhido; as da pessoa aparecem abertas.
+  const { personal, suggested, suggestedCount } = splitSuggestedRules(items, categories);
+  const missingFromPack = categories ? rulesToCreate(categories, items).toCreate.length : 0;
+
+  const renderRule = (item: CategoryRule, first: boolean, last: boolean) => {
+            const removed = item.status === "removed";
+            const busy = busyId === item.id;
+            const category = ruleCategory(item, categories);
+            return (
+              <View
+                style={[
+                  list.item,
+                  first && list.itemFirst,
+                  last && list.itemLast,
+                  styles.item,
+                ]}
+              >
+                <View style={styles.row}>
+                  <Text style={[styles.sentence, removed && styles.muted]}>
+                    {ruleCondition(item, accounts)} →{" "}
+                    <Text style={styles.category}>{category.name}</Text>
+                    {category.archived ? " (arquivada)" : ""}
+                  </Text>
+                  <StatusChip tone={item.status === "active" ? "positive" : "neutral"} label={STATUS_LABELS[item.status]} />
+                </View>
+                <Text style={styles.meta}>
+                  Prioridade {item.priority}
+                  {category.archived && !removed
+                    ? " · Não será aplicada enquanto a categoria estiver arquivada."
+                    : ""}
+                  {removed ? " · Somente leitura" : ""}
+                </Text>
+                {removed ? null : (
+                  <View style={styles.actions}>
+                    <Button
+                      variant="text"
+                      label="Editar"
+                      accessibilityLabel={`Editar a regra ${ruleCondition(item, accounts)}`}
+                      onPress={() => setMode({ kind: "edit", rule: item })}
+                      disabled={busyId !== null || categories === null || accounts === null}
+                    />
+                    <Button
+                      variant="text"
+                      label={item.status === "active" ? "Desativar" : "Ativar"}
+                      onPress={() => void runLifecycle(item, item.status === "active" ? "deactivate" : "activate")}
+                      disabled={busyId !== null}
+                      loading={busy}
+                    />
+                    <Button
+                      variant="textDanger"
+                      label="Remover"
+                      accessibilityLabel={`Remover a regra ${ruleCondition(item, accounts)}`}
+                      onPress={() => confirmRemove(item)}
+                      disabled={busyId !== null}
+                    />
+                  </View>
+                )}
+              </View>
+            );
+  };
 
   const header = (
     <View style={styles.header}>
@@ -269,14 +303,6 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
           tone="warning"
           text={`Não foi possível carregar suas ${categories === null ? "categorias" : "contas"}. Os nomes podem aparecer como indisponíveis e a criação de regras fica pausada.`}
           action={{ label: "Tentar de novo", onPress: () => void load() }}
-        />
-      ) : null}
-      {state === "ready" && categories !== null ? (
-        <RulePackSection
-          canApply={activeCategories.length > 0}
-          applying={applyingPack}
-          onApply={() => void addRulePack()}
-          onGoToCategories={() => onNavigate("categorias")}
         />
       ) : null}
       {state === "ready" && categories !== null && activeCategories.length === 0 ? (
@@ -330,7 +356,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={personal}
           keyExtractor={(item) => item.id}
           contentContainerStyle={list.list}
           refreshControl={
@@ -343,7 +369,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
           }
           ListHeaderComponent={header}
           ListEmptyComponent={
-            canCreate ? (
+            canCreate && suggestedCount === 0 ? (
               <EmptyState
                 icon={(color) => <IconRules size={24} color={color} />}
                 title="Nenhuma regra ainda"
@@ -352,73 +378,23 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
             ) : null
           }
           ListFooterComponent={
-            hasMore ? (
-              <View style={styles.more}>
-                <Button
-                  variant="secondary"
-                  label="Carregar mais"
-                  onPress={() => void loadMore()}
-                  loading={loadingMore}
+            <View style={styles.footer}>
+              {truncated ? <Notice tone="info" text="Você tem mais de 500 regras: a lista mostra só as primeiras." /> : null}
+              {state === "ready" && categories !== null ? (
+                <RulePackSection
+                  canApply={activeCategories.length > 0}
+                  applying={applyingPack}
+                  onApply={() => void addRulePack()}
+                  onGoToCategories={() => onNavigate("categorias")}
+                  groups={suggested}
+                  count={suggestedCount}
+                  missing={missingFromPack}
+                  renderRule={renderRule}
                 />
-              </View>
-            ) : null
+              ) : null}
+            </View>
           }
-          renderItem={({ item, index }) => {
-            const removed = item.status === "removed";
-            const busy = busyId === item.id;
-            const category = ruleCategory(item, categories);
-            return (
-              <View
-                style={[
-                  list.item,
-                  index === 0 && list.itemFirst,
-                  index === items.length - 1 && list.itemLast,
-                  styles.item,
-                ]}
-              >
-                <View style={styles.row}>
-                  <Text style={[styles.sentence, removed && styles.muted]}>
-                    {ruleCondition(item, accounts)} →{" "}
-                    <Text style={styles.category}>{category.name}</Text>
-                    {category.archived ? " (arquivada)" : ""}
-                  </Text>
-                  <StatusChip tone={item.status === "active" ? "positive" : "neutral"} label={STATUS_LABELS[item.status]} />
-                </View>
-                <Text style={styles.meta}>
-                  Prioridade {item.priority}
-                  {category.archived && !removed
-                    ? " · Não será aplicada enquanto a categoria estiver arquivada."
-                    : ""}
-                  {removed ? " · Somente leitura" : ""}
-                </Text>
-                {removed ? null : (
-                  <View style={styles.actions}>
-                    <Button
-                      variant="text"
-                      label="Editar"
-                      accessibilityLabel={`Editar a regra ${ruleCondition(item, accounts)}`}
-                      onPress={() => setMode({ kind: "edit", rule: item })}
-                      disabled={busyId !== null || categories === null || accounts === null}
-                    />
-                    <Button
-                      variant="text"
-                      label={item.status === "active" ? "Desativar" : "Ativar"}
-                      onPress={() => void runLifecycle(item, item.status === "active" ? "deactivate" : "activate")}
-                      disabled={busyId !== null}
-                      loading={busy}
-                    />
-                    <Button
-                      variant="textDanger"
-                      label="Remover"
-                      accessibilityLabel={`Remover a regra ${ruleCondition(item, accounts)}`}
-                      onPress={() => confirmRemove(item)}
-                      disabled={busyId !== null}
-                    />
-                  </View>
-                )}
-              </View>
-            );
-          }}
+          renderItem={({ item, index }) => renderRule(item, index === 0, index === personal.length - 1)}
         />
       )}
     </AppScreen>
@@ -427,7 +403,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
 
 const useStyles = makeStyles((c) => ({
   header: { gap: 8, paddingBottom: 12 },
-  more: { paddingTop: 12 },
+  footer: { gap: 12, paddingTop: 16 },
   item: { gap: 6 },
   row: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   sentence: { ...type.body, color: c.foreground, flex: 1 },

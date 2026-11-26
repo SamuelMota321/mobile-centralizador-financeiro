@@ -103,3 +103,47 @@ export function rulesToCreate(
   }
   return { toCreate, missingCategories };
 }
+
+export interface SuggestedRuleGroup<R> {
+  category: SuggestedCategory;
+  rules: R[];
+}
+
+/**
+ * Separa as regras da pessoa das que vieram do pacote, para exibir as sugeridas num grupo
+ * recolhido. O backend não marca a origem: é sugerida a regra "descrição contém" com um termo
+ * do pacote apontando para a categoria daquele termo. Editada para outro termo ou categoria,
+ * ela passa a ser da pessoa. Só muda a exibição; prioridade e aplicação seguem iguais.
+ */
+export function splitSuggestedRules<
+  R extends { categoryId: string; conditionField: string; conditionOperator: string; conditionValue: string },
+>(
+  rules: readonly R[],
+  categories: readonly { id: string; name: string }[] | null,
+  pack: readonly RulePackGroup[] = RULE_PACK,
+): { personal: R[]; suggested: SuggestedRuleGroup<R>[]; suggestedCount: number } {
+  const categoryName = new Map((categories ?? []).map((category) => [category.id, normalize(category.name)]));
+  const groupOf = (rule: R): RulePackGroup | undefined => {
+    if (rule.conditionField !== "description" || rule.conditionOperator !== "contains") return undefined;
+    const name = categoryName.get(rule.categoryId);
+    if (!name) return undefined;
+    const value = rule.conditionValue.toLowerCase();
+    return pack.find((group) => normalize(group.category) === name && group.values.some((item) => item.toLowerCase() === value));
+  };
+
+  const personal: R[] = [];
+  const byCategory = new Map<SuggestedCategory, R[]>();
+  for (const rule of rules) {
+    const group = groupOf(rule);
+    if (!group) {
+      personal.push(rule);
+      continue;
+    }
+    byCategory.set(group.category, [...(byCategory.get(group.category) ?? []), rule]);
+  }
+  // Ordem do pacote, só com os grupos que têm regras.
+  const suggested = pack
+    .filter((group) => byCategory.has(group.category))
+    .map((group) => ({ category: group.category, rules: byCategory.get(group.category) ?? [] }));
+  return { personal, suggested, suggestedCount: rules.length - personal.length };
+}
