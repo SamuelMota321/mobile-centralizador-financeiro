@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
+import { overviewPreviewEnabled } from "../lib/overview/flag";
 import { makeStyles, radius, type, useTheme } from "../theme";
 import { BrandLockup } from "./brand";
 import {
@@ -17,13 +18,16 @@ import {
   IconCategories,
   IconClose,
   IconMovements,
+  IconOverview,
   IconRules,
   IconSignOut,
 } from "./icons";
 
-export type Section = "movimentacoes" | "contas" | "categorias" | "regras";
+export type Section = "visao-geral" | "movimentacoes" | "contas" | "categorias" | "regras";
 
+const SHOW_OVERVIEW = overviewPreviewEnabled();
 const TABS = [
+  ...(SHOW_OVERVIEW ? [{ section: "visao-geral", label: "Visão geral", Icon: IconOverview } as const] : []),
   { section: "movimentacoes", label: "Movimentações", Icon: IconMovements },
   { section: "contas", label: "Contas", Icon: IconAccounts },
   { section: "categorias", label: "Categorias", Icon: IconCategories },
@@ -102,10 +106,15 @@ export function AppScreen({
                 <Icon size={22} color={color} />
               </View>
               <Text
-                style={[styles.tabLabel, { color }, selected && styles.tabLabelSelected]}
-                numberOfLines={1}
+                style={[
+                  styles.tabLabel,
+                  SHOW_OVERVIEW && styles.tabLabelCompact,
+                  { color },
+                  selected && styles.tabLabelSelected,
+                ]}
+                numberOfLines={SHOW_OVERVIEW ? 2 : 1}
               >
-                {label}
+                {SHOW_OVERVIEW && target === "movimentacoes" ? "Movimentos" : label}
               </Text>
             </Pressable>
           );
@@ -141,6 +150,7 @@ const useAppStyles = makeStyles((c) => ({
   tab: { flex: 1, alignItems: "center", gap: 2, minHeight: 52, justifyContent: "center" },
   tabIcon: {
     width: 56,
+    maxWidth: "100%",
     height: 30,
     borderRadius: radius.pill,
     alignItems: "center",
@@ -148,6 +158,7 @@ const useAppStyles = makeStyles((c) => ({
   },
   tabIconSelected: { backgroundColor: c.primaryTint },
   tabLabel: { ...type.micro, fontFamily: "Manrope_600SemiBold" },
+  tabLabelCompact: { fontSize: 11, lineHeight: 14, textAlign: "center", maxWidth: "100%" },
   tabLabelSelected: { fontFamily: "Manrope_700Bold" },
   pressed: { opacity: 0.7 },
 }));

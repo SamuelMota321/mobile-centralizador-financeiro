@@ -27,6 +27,12 @@ function Frame({ size = 22, children }: { size?: number; children: ReactNode }) 
   );
 }
 
+export const IconOverview = ({ size, color }: IconProps) => (
+  <Frame size={size}>
+    <Path d="M4 4v16h16M8 15l4-5 3 2 5-6" {...stroke(color)} />
+  </Frame>
+);
+
 export const IconMovements = ({ size, color }: IconProps) => (
   <Frame size={size}>
     <Path d="M7 4v16M7 4 3.5 7.5M7 4l3.5 3.5M17 20V4m0 16-3.5-3.5M17 20l3.5-3.5" {...stroke(color)} />

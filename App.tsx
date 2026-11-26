@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { AccountsScreen } from "./src/screens/AccountsScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { MovementsScreen } from "./src/screens/MovementsScreen";
+import { OverviewScreen } from "./src/screens/OverviewScreen";
 import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
 import { useTheme } from "./src/theme";
@@ -59,6 +60,8 @@ function Root() {
   // Ao sair, Root troca para SignInScreen e desmonta as telas: nenhum dado do tenant
   // anterior permanece em estado.
   switch (section) {
+    case "visao-geral":
+      return <OverviewScreen onNavigate={setSection} />;
     case "movimentacoes":
       return <MovementsScreen onNavigate={setSection} />;
     case "contas":
