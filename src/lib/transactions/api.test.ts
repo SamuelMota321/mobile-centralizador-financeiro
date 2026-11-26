@@ -5,6 +5,7 @@ import {
   createTransaction,
   createTransfer,
   listTransactions,
+  listTransactionsSince,
   updateTransactionCategory,
 } from "./api";
 
@@ -171,5 +172,34 @@ describe("updateTransactionCategory", () => {
       updateTransactionCategory(TX_ID, { categorizationStatus: "unclassified" } as never),
     ).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("listTransactionsSince", () => {
+  function pageOf(dates: string[], total: number) {
+    return { items: dates.map((occurredOn) => view({ occurredOn })), page: 1, pageSize: 100, total };
+  }
+
+  it("para na primeira data anterior ao início e devolve só o período", async () => {
+    const first = Array.from({ length: 100 }, () => "2026-11-20");
+    const second = ["2026-11-02", "2026-11-01", "2026-10-31"];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(pageOf(first, 103))))
+      .mockResolvedValueOnce(new Response(JSON.stringify(pageOf(second, 103))));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await listTransactionsSince("2026-11-01");
+    expect(result).toMatchObject({ complete: true, total: 103 });
+    expect(result.items).toHaveLength(102);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("marca incompleto quando o teto corta o período", async () => {
+    const full = Array.from({ length: 100 }, () => "2026-11-20");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(pageOf(full, 1000)))));
+    const result = await listTransactionsSince("2026-01-01", 200);
+    expect(result.complete).toBe(false);
+    expect(result.items).toHaveLength(200);
   });
 });

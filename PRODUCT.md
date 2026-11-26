@@ -36,7 +36,7 @@ Organiza dados manuais, OFX e Pluggy Sandbox sem se comportar como banco: não m
 - Nenhuma precisão de categorização é declarada sem conjunto de dados e evidência executada.
 - Recursos inexistentes, de outro tenant ou arquivados recebem a mesma mensagem neutra.
 - Fora do MVP: PDF, impostos, alertas, notificações, cobrança, dados reais, painel administrativo. Pix e movimentação de fundos estão permanentemente excluídos.
-- Saldo atual e totais pertencem ao dashboard (sprint futura); a interface não calcula nem insinua saldos consolidados antes disso.
+- Movimentações mostra entradas, saídas e balanço do período filtrado, calculados dos lançamentos (sem transferências nem estornos) e só quando o período inteiro foi lido; nunca um número parcial. Saldo atual de contas, patrimônio e demais totais consolidados continuam pertencendo ao dashboard.
 
 ## Brand Commitments
 

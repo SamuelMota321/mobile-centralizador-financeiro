@@ -42,7 +42,7 @@ function rankByValue<T extends { value: string }>(items: readonly T[]): T[] {
   });
 }
 
-function fromCents(cents: bigint): string {
+export function fromCents(cents: bigint): string {
   const negative = cents < ZERO;
   const digits = (negative ? -cents : cents).toString().padStart(3, "0");
   return `${negative ? "-" : ""}${digits.slice(0, -2)}.${digits.slice(-2)}`;

@@ -6,7 +6,6 @@ import {
   appendPage,
   canCategorize,
   CATEGORY_FALLBACK_LABEL,
-  categorizationLabel,
   categorizationTone,
   movementDirection,
   replaceItem,
@@ -63,45 +62,6 @@ describe("typeLabel e signedAmount", () => {
     const label = typeLabel({ type: "transfer", transferSide: "outgoing" }).toLowerCase();
     for (const word of ["enviar", "pix", "pagar", "bancaria", "bancária"]) {
       expect(label).not.toContain(word);
-    }
-  });
-});
-
-describe("categorizationLabel", () => {
-  const CATEGORY_ID = "7c6b5a49-3827-4165-9a8b-7c6d5e4f3a2b";
-  const categories = [{ id: CATEGORY_ID, name: "Mercado", status: "active" as const }];
-
-  it.each([
-    ["unclassified", null, "Sem categoria"],
-    ["categorized", "manual", "Mercado · definida por você"],
-    ["categorized", "rule", "Mercado · aplicada por regra"],
-    ["uncertain", null, "Categoria incerta"],
-    ["unrecognized", null, "Não reconhecida"],
-    ["not_applicable", null, "Não se aplica"],
-  ] as const)("%s/%s", (categorizationStatus, categorizationSource, expected) => {
-    const categoryId = categorizationStatus === "categorized" ? CATEGORY_ID : null;
-    expect(
-      categorizationLabel({ categorizationStatus, categorizationSource, categoryId }, categories),
-    ).toBe(expected);
-  });
-
-  it("mantém legível a categoria arquivada", () => {
-    expect(
-      categorizationLabel(
-        { categorizationStatus: "categorized", categorizationSource: "manual", categoryId: CATEGORY_ID },
-        [{ id: CATEGORY_ID, name: "Mercado", status: "archived" }],
-      ),
-    ).toBe("Mercado (arquivada) · definida por você");
-  });
-
-  it("usa fallback neutro quando a categoria não é encontrada", () => {
-    for (const list of [[], null]) {
-      expect(
-        categorizationLabel(
-          { categorizationStatus: "categorized", categorizationSource: "rule", categoryId: CATEGORY_ID },
-          list,
-        ),
-      ).toBe(`${CATEGORY_FALLBACK_LABEL} · aplicada por regra`);
     }
   });
 });

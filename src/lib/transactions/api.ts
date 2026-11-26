@@ -43,6 +43,31 @@ export async function listTransactions(
   }
 }
 
+/** Teto de lançamentos lidos para somar um período: acima disso, a soma não é mostrada. */
+export const PERIOD_SCAN_LIMIT = 3000;
+
+/**
+ * Lê as páginas (mais recentes primeiro) até passar de `since` ou atingir o teto. A ordem
+ * do servidor (occurredOn desc) garante que, ao ver uma data anterior, nada do período
+ * ficou para trás. `complete` é false quando o teto cortou: não somar. `total` é o tamanho
+ * do histórico inteiro, informado pela API.
+ */
+export async function listTransactionsSince(
+  since: string,
+  limit: number = PERIOD_SCAN_LIMIT,
+): Promise<{ items: Transaction[]; complete: boolean; total: number }> {
+  const items: Transaction[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await listTransactions({ page, pageSize: 100 });
+    const inRange = result.items.filter((item) => item.occurredOn >= since);
+    items.push(...inRange);
+    const passedSince = inRange.length < result.items.length;
+    const exhausted = page * 100 >= result.total || result.items.length === 0;
+    if (passedSince || exhausted) return { items, complete: true, total: result.total };
+    if (items.length >= limit) return { items, complete: false, total: result.total };
+  }
+}
+
 /** POST /api/v1/transactions — receita ou despesa manual. */
 export async function createTransaction(
   input: CreateTransactionInput,
