@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, RefreshControl, Text, View } from "react-native";
+import { Alert, RefreshControl, SectionList, Text, View } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { deactivateAccount, listAccounts } from "../lib/accounts/api";
 import {
@@ -9,13 +9,27 @@ import {
   isUnauthorized,
 } from "../lib/accounts/messages";
 import type { Account } from "../lib/accounts/types";
+import { listAllPages, SELECTOR_ITEM_LIMIT } from "../lib/api/pagination";
 import { formatCivilDate } from "../lib/civil-date";
 import { formatMoney } from "../lib/money";
-import { makeStyles, type, useTheme } from "../theme";
+import { makeStyles, radius, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
-import { IconAccounts, IconPlus } from "../ui/icons";
+import { IconAccounts, IconPlus, IconTransfer } from "../ui/icons";
+import { FilterChips, GroupHeader, SearchField } from "../ui/list-tools";
+import { Monogram } from "../ui/monogram";
+import { StatCard, StatGrid } from "../ui/stat-card";
 import { AppScreen, type Section, useListStyles } from "../ui/screens";
 import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
+import {
+  ACCOUNT_GROUPS,
+  type AccountGroup,
+  accountCounts,
+  filterAccounts,
+  GROUP_LABELS,
+  groupAccounts,
+  groupBreakdown,
+  shareOf,
+} from "./accounts-logic";
 import { AccountFormScreen } from "./AccountFormScreen";
 import { ConnectScreen } from "./ConnectScreen";
 import { OfxImportScreen } from "./OfxImportScreen";
@@ -47,11 +61,16 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
   const [notice, setNotice] = useState<NoticeState | null>(null);
   // Conta com desativação em andamento: bloqueia toque duplo e outras ações nela.
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [search, setSearch] = useState("");
+  const [group, setGroup] = useState<AccountGroup | "all">("all");
 
   const load = useCallback(async () => {
     try {
-      const page = await listAccounts();
-      setAccounts(page.items);
+      // Lista inteira (até 500) para agrupar, contar e buscar: a API não tem busca nem totais.
+      const result = await listAllPages((query) => listAccounts(query));
+      setAccounts(result.items);
+      setTruncated(result.truncated);
       setState("ready");
     } catch (error) {
       if (isUnauthorized(error)) {
@@ -153,7 +172,12 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
       ? undefined
       : accounts.length === 0
         ? "Contas correntes, poupanças, cartões e dinheiro."
-        : `${accounts.length} ${accounts.length === 1 ? "conta ativa" : "contas ativas"}`;
+        : "Suas contas manuais e conectadas em um só lugar.";
+  const counts = accountCounts(accounts);
+  const sections = groupAccounts(filterAccounts(accounts, { search, group: group === "all" ? null : group })).map(
+    (view) => ({ key: view.group, title: view.label, data: view.accounts }),
+  );
+  const filtering = search.trim() !== "" || group !== "all";
 
   return (
     <AppScreen
@@ -218,10 +242,11 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
           />
         </View>
       ) : (
-        <FlatList
-          data={accounts}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={list.list}
+          stickySectionHeadersEnabled={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -230,14 +255,73 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
               colors={[colors.primary]}
             />
           }
-          ListEmptyComponent={
-            <EmptyState
-              icon={(color) => <IconAccounts size={24} color={color} />}
-              title="Nenhuma conta ainda"
-              text="Crie sua primeira conta para registrar receitas, despesas e transferências."
-            />
+          ListHeaderComponent={
+            accounts.length > 0 ? (
+              <View style={styles.header}>
+                <StatGrid>
+                  <StatCard
+                    icon={(color) => <IconAccounts size={18} color={color} />}
+                    label="Contas ativas"
+                    value={String(counts.total)}
+                    meta={groupBreakdown(counts.byGroup)}
+                  />
+                  <StatCard
+                    label="Manuais"
+                    value={String(counts.manual)}
+                    meta={`de ${counts.total}, registradas por você`}
+                    share={shareOf(counts.manual, counts.total)}
+                  />
+                  <StatCard
+                    icon={(color) => <IconTransfer size={18} color={color} />}
+                    label="Conectadas"
+                    value={String(counts.connected)}
+                    meta={`de ${counts.total}, lidas do banco pelo Open Finance`}
+                    share={shareOf(counts.connected, counts.total)}
+                  />
+                </StatGrid>
+                {truncated ? (
+                  <Notice
+                    tone="info"
+                    text={`Você tem mais de ${SELECTOR_ITEM_LIMIT} contas: a lista, a busca e os números mostram só as primeiras.`}
+                  />
+                ) : null}
+                <SearchField value={search} onChange={setSearch} placeholder="Buscar por nome ou instituição" />
+                <FilterChips
+                  label="Grupo de contas"
+                  value={group}
+                  onChange={setGroup}
+                  options={[{ value: "all", label: "Todas" }, ...ACCOUNT_GROUPS.map((g) => ({ value: g, label: GROUP_LABELS[g] }))]}
+                />
+              </View>
+            ) : null
           }
-          renderItem={({ item, index }) => {
+          ListEmptyComponent={
+            filtering ? (
+              <EmptyState
+                icon={(color) => <IconAccounts size={24} color={color} />}
+                title="Nenhuma conta encontrada"
+                text="Nenhuma conta combina com a busca ou o grupo escolhido."
+                action={
+                  <Button
+                    variant="secondary"
+                    label="Limpar busca"
+                    onPress={() => {
+                      setSearch("");
+                      setGroup("all");
+                    }}
+                  />
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={(color) => <IconAccounts size={24} color={color} />}
+                title="Nenhuma conta ainda"
+                text="Crie sua primeira conta para registrar receitas, despesas e transferências."
+              />
+            )
+          }
+          renderSectionHeader={({ section }) => <GroupHeader label={section.title} count={section.data.length} />}
+          renderItem={({ item, index, section }) => {
             const busy = busyId === item.id;
             const manual = item.origin === "manual";
             return (
@@ -245,51 +329,63 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
                 style={[
                   list.item,
                   index === 0 && list.itemFirst,
-                  index === accounts.length - 1 && list.itemLast,
+                  index === section.data.length - 1 && list.itemLast,
                   styles.item,
                 ]}
               >
                 <View style={styles.row}>
+                  <Monogram text={item.institutionName ?? item.name} />
                   <View style={styles.main}>
                     <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.meta}>
-                      {ACCOUNT_TYPE_LABELS[item.type]}
-                      {item.institutionName ? ` · ${item.institutionName}` : ""}
-                    </Text>
+                    <Text style={styles.meta}>{item.institutionName ?? "Instituição não informada"}</Text>
                   </View>
                   <StatusChip tone={manual ? "neutral" : "info"} label={manual ? "Manual" : "Conectada"} />
                 </View>
 
                 <View style={styles.row}>
-                  <View>
+                  <View style={styles.main}>
+                    <View style={styles.typeTag}>
+                      <Text style={styles.typeTagLabel}>{ACCOUNT_TYPE_LABELS[item.type]}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.balanceBox}>
                     <Text style={styles.balance}>{formatMoney(item.initialBalance)}</Text>
-                    <Text style={styles.meta}>
-                      saldo inicial em {formatCivilDate(item.initialBalanceAsOf)}
-                    </Text>
+                    <Text style={styles.meta}>saldo inicial em {formatCivilDate(item.initialBalanceAsOf)}</Text>
                   </View>
-                  <View style={styles.actions}>
-                    {manual ? (
-                      <Button
-                        variant="text"
-                        label="Editar"
-                        accessibilityLabel={`Editar ${item.name}`}
-                        onPress={() => setMode({ kind: "edit", account: item })}
-                        disabled={busy}
-                      />
-                    ) : null}
+                </View>
+
+                <View style={styles.actions}>
+                  {manual ? (
                     <Button
-                      variant="textDanger"
-                      label="Desativar"
-                      accessibilityLabel={`Desativar ${item.name}`}
-                      onPress={() => confirmDeactivate(item)}
-                      disabled={busyId !== null}
-                      loading={busy}
+                      variant="text"
+                      label="Editar"
+                      accessibilityLabel={`Editar ${item.name}`}
+                      onPress={() => setMode({ kind: "edit", account: item })}
+                      disabled={busy}
                     />
-                  </View>
+                  ) : null}
+                  <Button
+                    variant="textDanger"
+                    label="Desativar"
+                    accessibilityLabel={`Desativar ${item.name}`}
+                    onPress={() => confirmDeactivate(item)}
+                    disabled={busyId !== null}
+                    loading={busy}
+                  />
                 </View>
               </View>
             );
           }}
+          ListFooterComponent={
+            accounts.length > 0 ? (
+              <View style={styles.footnote}>
+                <Notice
+                  tone="info"
+                  text="O valor de cada conta é o saldo inicial que você informou. Saldos atuais e totais chegam com o painel consolidado."
+                />
+              </View>
+            ) : null
+          }
         />
       )}
     </AppScreen>
@@ -297,11 +393,24 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
 }
 
 const useStyles = makeStyles((c) => ({
+  header: { gap: 12, paddingBottom: 4 },
   item: { gap: 10 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   main: { flex: 1, gap: 2 },
   name: { ...type.body, fontFamily: "Manrope_700Bold", color: c.foreground },
   meta: { ...type.micro, fontFamily: "Manrope_500Medium", color: c.muted },
+  typeTag: {
+    alignSelf: "flex-start",
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: c.line,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceSoft,
+  },
+  typeTagLabel: { ...type.micro, color: c.bodyText },
+  balanceBox: { alignItems: "flex-end" },
   balance: { ...type.amount, color: c.foreground },
-  actions: { flexDirection: "row", alignItems: "center", gap: 16 },
+  actions: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 16 },
+  footnote: { paddingTop: 16 },
 }));
