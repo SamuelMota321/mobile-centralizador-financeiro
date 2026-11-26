@@ -5,6 +5,7 @@ import { listAccounts } from "../lib/accounts/api";
 import { isUnauthorized } from "../lib/accounts/messages";
 import { listAllPages } from "../lib/api/pagination";
 import { listCategories } from "../lib/categories/api";
+import { applyRulePack } from "../lib/categories/apply-suggestions";
 import {
   activateCategoryRule,
   deactivateCategoryRule,
@@ -18,6 +19,7 @@ import { IconCategories, IconPlus, IconRules } from "../ui/icons";
 import { AppScreen, type Section, useListStyles } from "../ui/screens";
 import { PAGE_SIZE } from "./movement-presentation";
 import { RuleFormScreen } from "./RuleFormScreen";
+import { RulePackSection } from "./RulePackSection";
 import {
   type CategoryOption,
   classifyRuleError,
@@ -58,6 +60,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
   const [loadingMore, setLoadingMore] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [applyingPack, setApplyingPack] = useState(false);
   // Regra com ação em andamento: bloqueia toque duplo e outras ações.
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -97,6 +100,26 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
     setPage(1);
     setState("ready");
   }, [handleUnauthorized]);
+
+  const addRulePack = useCallback(async () => {
+    setApplyingPack(true);
+    const result = await applyRulePack();
+    setApplyingPack(false);
+    if (!result.ok && isUnauthorized(result.error)) {
+      await handleUnauthorized();
+      return;
+    }
+    if (result.ok) {
+      const missing = result.missingCategories.length > 0 ? ` Ficaram de fora as de ${result.missingCategories.join(", ")}: essas categorias não existem ou estão arquivadas.` : "";
+      setNotice({
+        tone: result.created > 0 ? "success" : "info",
+        text: (result.created > 0 ? `${result.created} ${result.created === 1 ? "regra adicionada" : "regras adicionadas"}.` : "Todas as regras do pacote já existem para as suas categorias.") + missing,
+      });
+    } else {
+      setNotice({ tone: "error", text: `Não foi possível adicionar o pacote inteiro. ${result.created > 0 ? `${result.created} regras entraram; ` : ""}toque de novo para criar as que faltam.` });
+    }
+    await load();
+  }, [handleUnauthorized, load]);
 
   useEffect(() => {
     void load();
@@ -246,6 +269,14 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
           tone="warning"
           text={`Não foi possível carregar suas ${categories === null ? "categorias" : "contas"}. Os nomes podem aparecer como indisponíveis e a criação de regras fica pausada.`}
           action={{ label: "Tentar de novo", onPress: () => void load() }}
+        />
+      ) : null}
+      {state === "ready" && categories !== null ? (
+        <RulePackSection
+          canApply={activeCategories.length > 0}
+          applying={applyingPack}
+          onApply={() => void addRulePack()}
+          onGoToCategories={() => onNavigate("categorias")}
         />
       ) : null}
       {state === "ready" && categories !== null && activeCategories.length === 0 ? (

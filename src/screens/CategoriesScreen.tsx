@@ -3,6 +3,8 @@ import { Alert, FlatList, RefreshControl, Text, View } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { isUnauthorized } from "../lib/accounts/messages";
 import { deactivateCategory, listCategories } from "../lib/categories/api";
+import { createSuggestedCategories } from "../lib/categories/apply-suggestions";
+import { SUGGESTED_CATEGORIES } from "../lib/categories/suggestions";
 import type { Category } from "../lib/categories/types";
 import { makeStyles, type, useTheme } from "../theme";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
@@ -41,6 +43,7 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
   const [loadingMore, setLoadingMore] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
   // Categoria com arquivamento em andamento: bloqueia toque duplo.
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -59,6 +62,23 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
       setState("error");
     }
   }, [handleUnauthorized]);
+
+  // Atalho opcional: cria o conjunto básico, que depois pertence à pessoa. Repetir é seguro.
+  const applySuggested = useCallback(async () => {
+    setSuggesting(true);
+    const result = await createSuggestedCategories();
+    setSuggesting(false);
+    if (!result.ok && isUnauthorized(result.error)) {
+      await handleUnauthorized();
+      return;
+    }
+    setNotice(
+      result.ok
+        ? { tone: "success", text: `${result.created} ${result.created === 1 ? "categoria criada" : "categorias criadas"}. Renomeie ou arquive as que não fizerem sentido.` }
+        : { tone: "error", text: `Não foi possível criar todas as sugeridas. ${result.created > 0 ? `${result.created} entraram; ` : ""}toque de novo para criar as que faltam.` },
+    );
+    await load();
+  }, [handleUnauthorized, load]);
 
   useEffect(() => {
     void load();
@@ -225,7 +245,8 @@ export function CategoriesScreen({ onNavigate }: { onNavigate: (section: Section
             <EmptyState
               icon={(color) => <IconCategories size={24} color={color} />}
               title="Nenhuma categoria ainda"
-              text="Categorias ajudam a entender para onde vai o dinheiro. Nenhuma vem pronta: crie a primeira e atribua às suas movimentações."
+              text={`Categorias ajudam a entender para onde vai o dinheiro. Crie a sua ou comece pelas sugeridas: ${SUGGESTED_CATEGORIES.join(", ")}.`}
+              action={<Button label="Usar categorias sugeridas" onPress={() => void applySuggested()} loading={suggesting} />}
             />
           }
           ListFooterComponent={

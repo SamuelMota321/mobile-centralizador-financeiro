@@ -32,6 +32,7 @@ Organiza dados manuais, OFX e Pluggy Sandbox sem se comportar como banco: não m
 
 ## Capabilities and Constraints
 
+- Categorias e regras sugeridas são opcionais: a pessoa escolhe criá-las (conjunto básico de categorias e um pacote de regras "descrição contém" que ela pode ver antes) e, depois de criadas, elas pertencem a ela como qualquer outra. Nada é criado sem pedido.
 - Estados de categorização sempre explícitos: sem categoria, categorizada (definida pelo usuário ou aplicada por regra), incerta, não reconhecida, não se aplica (transferências).
 - Nenhuma precisão de categorização é declarada sem conjunto de dados e evidência executada.
 - Recursos inexistentes, de outro tenant ou arquivados recebem a mesma mensagem neutra.
