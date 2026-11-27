@@ -16,7 +16,7 @@ describe("importRunSchema", () => {
   it("aceita o resultado com importado, duplicado ignorado e erro", () => {
     const run = importRunSchema.parse(resultRun());
     expect(run.items.map((item) => item.status)).toEqual(["imported", "ignored_duplicate", "failed"]);
-    expect(run.items[2]?.errorCode).toBe("codigo_ficticio");
+    expect(run.items[2]).toMatchObject({ isDuplicate: null, errorCode: "codigo_ficticio" });
     expect(run.terminalAt).toBe("2026-10-09T12:01:00.000Z");
   });
 
@@ -46,6 +46,8 @@ describe("importRunSchema", () => {
     const withoutFlag: Record<string, unknown> = previewItem();
     delete withoutFlag.isDuplicate;
     expect(importRunSchema.safeParse(previewRun({ items: [withoutFlag] })).success).toBe(false);
+    const unresolved = previewRun({ items: [previewItem({ isDuplicate: null })] });
+    expect(importRunSchema.safeParse(unresolved).success).toBe(false);
     expect(importRunSchema.safeParse(previewRun({ destinationAccountId: null })).success).toBe(false);
   });
 });

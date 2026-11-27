@@ -37,7 +37,8 @@ export async function createOfxPreview(
   const { file } = input;
   const body = new FormData();
   // `{ uri, name, type }` e o formato de arquivo que o FormData do React Native aceita.
-  const part = { uri: file.uri, name: file.name, ...(file.mimeType ? { type: file.mimeType } : {}) };
+  // No Android, a parte binaria precisa de tipo mesmo quando o seletor nao o informa.
+  const part = { uri: file.uri, name: file.name, type: file.mimeType?.trim() || "application/x-ofx" };
   body.append("file", part as unknown as Blob);
   body.append("destinationAccountId", destinationAccountId);
   try {

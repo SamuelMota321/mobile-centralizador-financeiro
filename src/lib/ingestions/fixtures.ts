@@ -70,7 +70,13 @@ export function resultRun(overrides: Record<string, unknown> = {}) {
     items: [
       previewItem({ status: "imported" }),
       previewItem({ ordinal: 2, externalId: "FITID-0002", status: "ignored_duplicate", isDuplicate: true }),
-      previewItem({ ordinal: 3, externalId: "FITID-0003", status: "failed", errorCode: "codigo_ficticio" }),
+      previewItem({
+        ordinal: 3,
+        externalId: "FITID-0003",
+        status: "failed",
+        isDuplicate: null,
+        errorCode: "codigo_ficticio",
+      }),
     ],
     ...overrides,
   };

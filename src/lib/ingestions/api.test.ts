@@ -57,15 +57,22 @@ describe("createOfxPreview", () => {
     expect(run.items.some((item) => item.isDuplicate)).toBe(true);
   });
 
-  it("omite o tipo quando o seletor não informa", async () => {
-    const append = vi.spyOn(FormData.prototype, "append");
-    stubFetch(201, previewRun());
-    await createOfxPreview(
-      { file: { uri: asset.uri, name: asset.name }, destinationAccountId: DESTINATION_ACCOUNT_ID },
-      { idempotencyKey: KEY },
-    );
-    expect(append).toHaveBeenCalledWith("file", { uri: asset.uri, name: asset.name });
-  });
+  it.each([undefined, null, ""])(
+    "envia um tipo OFX quando o seletor informa %j",
+    async (mimeType) => {
+      const append = vi.spyOn(FormData.prototype, "append");
+      stubFetch(201, previewRun());
+      await createOfxPreview(
+        { file: { ...asset, mimeType }, destinationAccountId: DESTINATION_ACCOUNT_ID },
+        { idempotencyKey: KEY },
+      );
+      expect(append).toHaveBeenCalledWith("file", {
+        uri: asset.uri,
+        name: asset.name,
+        type: "application/x-ofx",
+      });
+    },
+  );
 
   it("recusa conta ou chave inválidas antes de chamar o backend", async () => {
     const fetchMock = stubFetch(201, previewRun());
@@ -100,6 +107,7 @@ describe("confirmImport", () => {
     expect(call.headers.get("content-type")).toBe("application/json");
     expect(JSON.parse(String(call.init.body))).toEqual({ destinationAccountId: DESTINATION_ACCOUNT_ID });
     expect(run.importedItems).toBe(1);
+    expect(run.items[2]).toMatchObject({ status: "failed", isDuplicate: null });
   });
 
   it("recusa id da importação que não é UUID", async () => {

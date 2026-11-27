@@ -41,8 +41,8 @@ export interface IngestionItem {
   occurredOn: string;
   description: string | null;
   status: IngestionItemStatus;
-  /** Calculado para a conta de destino informada junto com o arquivo. */
-  isDuplicate: boolean;
+  /** Calculado para a conta de destino. Uma linha com falha pode trazer null. */
+  isDuplicate: boolean | null;
   warnings: string[];
   errorCode: string | null;
 }
