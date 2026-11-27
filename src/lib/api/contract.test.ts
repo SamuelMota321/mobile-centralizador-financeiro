@@ -157,6 +157,7 @@ describe("contrato OpenAPI de Transactions", () => {
     ["/api/v1/category-rules/{ruleId}", "delete"],
     ["/api/v1/category-rules/{ruleId}/activate", "post"],
     ["/api/v1/category-rules/{ruleId}/deactivate", "post"],
+    ["/api/v1/category-rules/{ruleId}/applications", "post"],
   ])("%s %s existe e exige bearer Auth0", (path, method) => {
     expect(operation(path, method).security).toEqual([{ auth0: [] }]);
   });

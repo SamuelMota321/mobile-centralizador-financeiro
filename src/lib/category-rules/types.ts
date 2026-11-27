@@ -48,3 +48,22 @@ export interface CategoryRuleInput {
 
 /** Corpo de PATCH /api/v1/category-rules/{id}: parcial, ao menos um campo. */
 export type CategoryRuleUpdate = Partial<CategoryRuleInput>;
+
+/** Corpo de POST /api/v1/category-rules/{id}/applications: datas civis AAAA-MM-DD, inclusive. */
+export interface ApplyCategoryRuleInput {
+  from: string;
+  to: string;
+}
+
+/** Resposta de POST /api/v1/category-rules/{id}/applications. */
+export interface CategoryRuleApplication {
+  ruleId: string;
+  from: string;
+  to: string;
+  /** Movimentações sem classificação no período que a regra avaliou. */
+  examined: number;
+  /** Quantas receberam a categoria da regra. */
+  categorized: number;
+  /** Parou no teto de linhas: aplicar de novo continua de onde parou. */
+  truncated: boolean;
+}

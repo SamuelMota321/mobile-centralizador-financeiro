@@ -3,12 +3,16 @@ import { apiRequest } from "../api/http-client";
 import { pageQuerySchema, type PageQuery } from "../api/pagination";
 import { toProblemError } from "../api/problem-error";
 import {
+  applyCategoryRuleInputSchema,
+  categoryRuleApplicationSchema,
   categoryRuleInputSchema,
   categoryRulePageSchema,
   categoryRuleSchema,
   categoryRuleUpdateSchema,
 } from "./schema";
 import type {
+  ApplyCategoryRuleInput,
+  CategoryRuleApplication,
   CategoryRule,
   CategoryRuleInput,
   CategoryRulePage,
@@ -69,6 +73,19 @@ export async function removeCategoryRule(
 ): Promise<CategoryRule> {
   const id = uuidSchema.parse(ruleId);
   return request(`${RULES_PATH}/${id}`, { method: "DELETE" }, categoryRuleSchema);
+}
+
+/**
+ * POST /api/v1/category-rules/{id}/applications — aplica UMA regra ativa as movimentacoes sem
+ * classificacao do periodo. Nunca troca categoria ja definida; repetir e seguro.
+ */
+export async function applyCategoryRule(
+  ruleId: string,
+  input: ApplyCategoryRuleInput,
+): Promise<CategoryRuleApplication> {
+  const id = uuidSchema.parse(ruleId);
+  const body = applyCategoryRuleInputSchema.parse(input);
+  return request(`${RULES_PATH}/${id}/applications`, { method: "POST", body }, categoryRuleApplicationSchema);
 }
 
 async function request<T>(

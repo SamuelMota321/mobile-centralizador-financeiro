@@ -18,9 +18,11 @@ export const ingestionItemSchema = z.object({
   occurredOn: z.string().refine(isRealCivilDate),
   description: z.string().nullable(),
   status: z.enum(INGESTION_ITEM_STATUSES),
-  isDuplicate: z.boolean(),
+  isDuplicate: z.boolean().nullable(),
   warnings: z.array(z.string()),
   errorCode: z.string().nullable(),
+}).refine((item) => item.isDuplicate !== null || item.status === "failed", {
+  path: ["isDuplicate"],
 });
 
 export const importRunSchema = z.object({

@@ -32,7 +32,8 @@ interface Props {
   categories: NamedOption[];
   accounts: NamedOption[];
   onCancel: () => void;
-  onDone: (message: string) => void;
+  /** `created` vem só ao criar: a lista pode oferecer aplicar a regra às movimentações já registradas. */
+  onDone: (message: string, created?: CategoryRule) => void;
   /** Regra, categoria ou conta indisponível: volta para a lista, que recarrega. */
   onStale: (message: string) => void;
   /** Nova regra com o valor da condição já preenchido ("descrição contém …"), vindo do simulador. */
@@ -90,8 +91,8 @@ export function RuleFormScreen({ rule, categories, accounts, onCancel, onDone, o
         await updateCategoryRule(rule.id, patch);
         onDone("Regra atualizada. Ela vale para as próximas movimentações; as já registradas não mudam.");
       } else {
-        await createCategoryRule(parsed.input);
-        onDone("Regra criada. Ela vale para as próximas movimentações; as já registradas não mudam.");
+        const created = await createCategoryRule(parsed.input);
+        onDone("Regra criada. Ela já vale para as próximas movimentações.", created);
       }
     } catch (error) {
       const failure = classifyRuleError(error, fallback);

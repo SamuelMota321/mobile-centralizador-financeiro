@@ -97,3 +97,19 @@ export const categoryRulePageSchema = z.object({
   pageSize: z.number().int(),
   total: z.number().int(),
 });
+
+const CIVIL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export const applyCategoryRuleInputSchema = z.strictObject({
+  from: z.string().regex(CIVIL_DATE),
+  to: z.string().regex(CIVIL_DATE),
+});
+
+export const categoryRuleApplicationSchema = z.object({
+  ruleId: z.string().regex(UUID),
+  from: z.string().regex(CIVIL_DATE),
+  to: z.string().regex(CIVIL_DATE),
+  examined: z.number().int().min(0),
+  categorized: z.number().int().min(0),
+  truncated: z.boolean(),
+});

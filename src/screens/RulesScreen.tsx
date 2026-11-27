@@ -21,6 +21,7 @@ import { Button, EmptyState, Notice, type NoticeTone, SkeletonList } from "../ui
 import { IconArrowRight, IconCategories, IconCheck, IconLightbulb, IconPause, IconPlus, IconRules, IconSparkles, IconTrash } from "../ui/icons";
 import { FilterChips, SearchField } from "../ui/list-tools";
 import { AppScreen, type Section } from "../ui/screens";
+import { RuleApplyScreen } from "./RuleApplyScreen";
 import { RuleFormScreen } from "./RuleFormScreen";
 import { RuleSimulatorScreen } from "./RuleSimulatorScreen";
 import { paginate } from "./category-presentation";
@@ -50,7 +51,12 @@ import { useForegroundRefresh } from "./use-foreground-refresh";
 
 type LoadState = "loading" | "ready" | "error";
 
-type Mode = { kind: "list" } | { kind: "create"; initialValue?: string } | { kind: "edit"; rule: CategoryRule } | { kind: "simulate" };
+type Mode =
+  | { kind: "list" }
+  | { kind: "create"; initialValue?: string }
+  | { kind: "edit"; rule: CategoryRule }
+  | { kind: "simulate" }
+  | { kind: "apply"; rule: CategoryRule; justCreated?: boolean };
 
 interface NoticeState {
   tone: NoticeTone;
@@ -312,7 +318,33 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
         categories={activeCategories}
         accounts={accounts}
         onCancel={() => setMode({ kind: "list" })}
-        onDone={backToList("success")}
+        onDone={(message, created) => {
+          // Regra nova e ativa: oferece aplicar às movimentações já registradas, antes de voltar à lista.
+          if (created) {
+            setNotice({ tone: "success", text: message });
+            setMode({ kind: "apply", rule: created, justCreated: true });
+            void load();
+          } else {
+            backToList("success")(message);
+          }
+        }}
+        onStale={backToList("info")}
+      />
+    );
+  }
+
+  if (mode.kind === "apply" && categories !== null && accounts !== null) {
+    const target = mode.rule;
+    return (
+      <RuleApplyScreen
+        rule={target}
+        categoryName={categoryName(target.categoryId)}
+        accounts={accounts}
+        intro={mode.justCreated ? "Regra criada. Quer aplicá-la às movimentações que você já registrou? Escolha o período." : undefined}
+        onClose={(changed) => {
+          setMode({ kind: "list" });
+          if (changed) void load();
+        }}
         onStale={backToList("info")}
       />
     );
@@ -369,6 +401,15 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
               onPress={() => setMode({ kind: "edit", rule: item })}
               disabled={busyId !== null || categories === null || accounts === null}
             />
+            {item.status === "active" && !category.archived ? (
+              <Button
+                variant="text"
+                label="Aplicar"
+                accessibilityLabel={`Aplicar a regra ${condition} às movimentações já registradas`}
+                onPress={() => setMode({ kind: "apply", rule: item })}
+                disabled={busyId !== null || categories === null || accounts === null}
+              />
+            ) : null}
             <Button
               variant="text"
               label={item.status === "active" ? "Desativar" : "Ativar"}
