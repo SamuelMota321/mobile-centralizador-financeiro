@@ -6,7 +6,7 @@ import { Manrope_800ExtraBold } from "@expo-google-fonts/manrope/800ExtraBold";
 import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
@@ -20,10 +20,17 @@ import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
 import type { MovementFilters } from "./src/screens/movement-presentation";
 import { overviewPreviewEnabled } from "./src/lib/overview/flag";
+import { restoreTheme } from "./src/theme-preference";
 import { useTheme } from "./src/theme";
 import type { Section } from "./src/ui/screens";
 
 export default function App() {
+  const { scheme } = useTheme();
+  const [themeReady, setThemeReady] = useState(false);
+  useEffect(() => {
+    void restoreTheme().then(() => setThemeReady(true));
+  }, []);
+
   // Fontes da marca antes da primeira tela: evita trocar de fonte com a tela já visível.
   const [fontsLoaded] = useFonts({
     Manrope_500Medium,
@@ -36,8 +43,8 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="auto" />
-        {fontsLoaded ? <Root /> : <Splash />}
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+        {fontsLoaded && themeReady ? <Root /> : <Splash />}
       </AuthProvider>
     </SafeAreaProvider>
   );

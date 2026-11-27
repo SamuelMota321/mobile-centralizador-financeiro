@@ -14,6 +14,7 @@ import { overviewPreviewEnabled } from "../lib/overview/flag";
 import { makeStyles, radius, type, useTheme } from "../theme";
 import { Backdrop } from "./backdrop";
 import { BrandLockup } from "./brand";
+import { ThemeSwitch } from "./theme-switch";
 import {
   IconAccounts,
   IconCategories,
@@ -80,16 +81,19 @@ export function AppScreen({
       <Backdrop />
       <View style={styles.header}>
         <BrandLockup />
-        <Pressable
-          onPress={() => void signOut()}
-          accessibilityRole="button"
-          accessibilityLabel="Sair da conta"
-          hitSlop={8}
-          style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
-        >
-          <IconSignOut size={18} color={colors.muted} />
-          <Text style={styles.signOutLabel}>Sair</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <ThemeSwitch />
+          <Pressable
+            onPress={() => void signOut()}
+            accessibilityRole="button"
+            accessibilityLabel="Sair da conta"
+            hitSlop={8}
+            style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
+          >
+            <IconSignOut size={18} color={colors.muted} />
+            <Text style={styles.signOutLabel}>Sair</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.titleBlock}>
@@ -163,6 +167,7 @@ const useAppStyles = makeStyles((c) => ({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
   signOut: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: 4 },
   signOutLabel: { ...type.label, color: c.muted },
   titleBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 2 },

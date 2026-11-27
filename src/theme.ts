@@ -121,7 +121,7 @@ export interface Theme {
 }
 
 export function useTheme(): Theme {
-  const scheme = useColorScheme() === "dark" ? "dark" : "light";
+  const scheme = useColorScheme() === "light" ? "light" : "dark";
   return useMemo(() => ({ scheme, colors: scheme === "dark" ? dark : light }), [scheme]);
 }
 

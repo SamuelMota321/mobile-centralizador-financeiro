@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { makeStyles, type } from "../theme";
 import { Backdrop } from "../ui/backdrop";
 import { BrandLockup } from "../ui/brand";
+import { ThemeSwitch } from "../ui/theme-switch";
 import { Button, Notice } from "../ui/controls";
 
 export function SignInScreen() {
@@ -14,7 +15,10 @@ export function SignInScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
       <Backdrop height={300} />
-      <BrandLockup />
+      <View style={styles.header}>
+        <BrandLockup />
+        <ThemeSwitch />
+      </View>
 
       <View style={styles.intro}>
         {/* Voz institucional: única aplicação de Newsreader no app. */}
@@ -37,6 +41,7 @@ export function SignInScreen() {
 }
 
 const useStyles = makeStyles((c) => ({
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   screen: {
     flex: 1,
     justifyContent: "space-between",
