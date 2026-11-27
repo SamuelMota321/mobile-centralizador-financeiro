@@ -152,6 +152,8 @@ export function InvestmentsScreen({ onNavigate }: { onNavigate: (section: Sectio
     <AppScreen
       section="investimentos"
       onNavigate={onNavigate}
+      onBack={() => onNavigate("contas")}
+      backLabel="Voltar para Contas"
       title="Investimentos"
       subtitle={subtitle}
       footer={

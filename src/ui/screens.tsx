@@ -17,6 +17,7 @@ import { BrandLockup } from "./brand";
 import {
   IconAccounts,
   IconCategories,
+  IconChevronLeft,
   IconClose,
   IconMovements,
   IconOverview,
@@ -46,6 +47,8 @@ export function AppScreen({
   subtitle,
   children,
   footer,
+  onBack,
+  backLabel = "Voltar",
 }: {
   section: Section;
   onNavigate: (section: Section) => void;
@@ -54,11 +57,23 @@ export function AppScreen({
   children: ReactNode;
   /** Ação principal fixa acima das abas. */
   footer?: ReactNode;
+  /** Telas abertas a partir de outra seção (sem aba própria): mostra "Voltar" e atende o Voltar do Android. */
+  onBack?: () => void;
+  backLabel?: string;
 }) {
   const styles = useAppStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
+
+  useEffect(() => {
+    if (!onBack) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [onBack]);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -78,6 +93,18 @@ export function AppScreen({
       </View>
 
       <View style={styles.titleBlock}>
+        {onBack ? (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel={backLabel}
+            hitSlop={8}
+            style={({ pressed }) => [styles.back, pressed && styles.pressed]}
+          >
+            <IconChevronLeft size={20} color={colors.primary} />
+            <Text style={styles.backLabel}>{backLabel}</Text>
+          </Pressable>
+        ) : null}
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>
@@ -139,6 +166,8 @@ const useAppStyles = makeStyles((c) => ({
   signOut: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: 4 },
   signOutLabel: { ...type.label, color: c.muted },
   titleBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 2 },
+  back: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, alignSelf: "flex-start", marginLeft: -4 },
+  backLabel: { ...type.label, color: c.primary },
   title: { ...type.pageTitle, color: c.foreground },
   subtitle: { ...type.bodySmall, color: c.muted },
   content: { flex: 1 },

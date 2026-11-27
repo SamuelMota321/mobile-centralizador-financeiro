@@ -179,6 +179,8 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
     <AppScreen
       section="patrimonio"
       onNavigate={onNavigate}
+      onBack={() => onNavigate("contas")}
+      backLabel="Voltar para Contas"
       title="Bens e dívidas"
       subtitle="Registre seus bens, financiamentos e dívidas. Os valores são informados por você."
     >
