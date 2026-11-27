@@ -33,10 +33,14 @@ describe("createSuggestedCategories", () => {
     expect(createCategory).not.toHaveBeenCalledWith({ name: "Lazer" });
   });
 
-  it("para na primeira falha e informa quantas entraram", async () => {
+  it("cria em lotes de 5: o lote com falha termina, conta as que entraram e não começa outro", async () => {
     vi.mocked(listCategories).mockResolvedValue(page([]));
-    vi.mocked(createCategory).mockResolvedValueOnce({ ...base, id: CATEGORY_ID, name: "x", status: "active" }).mockRejectedValueOnce(new Error("falha"));
-    expect(await createSuggestedCategories()).toMatchObject({ ok: false, created: 1 });
+    vi.mocked(createCategory)
+      .mockResolvedValueOnce({ ...base, id: CATEGORY_ID, name: "x", status: "active" })
+      .mockRejectedValueOnce(new Error("falha"))
+      .mockResolvedValue({ ...base, id: CATEGORY_ID, name: "x", status: "active" });
+    expect(await createSuggestedCategories()).toMatchObject({ ok: false, created: 4 });
+    expect(createCategory).toHaveBeenCalledTimes(5);
   });
 });
 
@@ -59,12 +63,11 @@ describe("applyRulePack", () => {
 });
 
 describe("createOneSuggestedCategory", () => {
-  it("cria só aquela; nome existente (até arquivada) é pulado; nome fora da lista é recusado", async () => {
-    vi.mocked(listCategories).mockResolvedValue(page([{ ...base, id: CATEGORY_ID, name: "Lazer", status: "archived" as const }]));
-    expect(await createOneSuggestedCategory("Lazer")).toEqual({ ok: true, created: 0, skipped: 1 });
+  it("cria direto, sem ler a lista antes; nome fora da lista é recusado", async () => {
     expect(await createOneSuggestedCategory("Saúde")).toEqual({ ok: true, created: 1, skipped: 0 });
     expect(createCategory).toHaveBeenCalledTimes(1);
     expect(createCategory).toHaveBeenCalledWith({ name: "Saúde" });
+    expect(listCategories).not.toHaveBeenCalled();
     expect(await createOneSuggestedCategory("Viagens")).toMatchObject({ ok: false });
   });
 

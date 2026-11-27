@@ -1,3 +1,4 @@
+import { runInBatches } from "../api/batch";
 import { PROBLEM_CODES, ProblemDetailsError } from "../api/errors";
 import { listAllPages } from "../api/pagination";
 import { activateCategoryRule, createCategoryRule, deactivateCategoryRule, listCategoryRules } from "../category-rules/api";
@@ -13,10 +14,10 @@ export async function createSuggestedCategories(): Promise<ApplyResult<{ skipped
   try {
     const { items } = await listAllPages((query) => listCategories(query));
     const names = categoriesToCreate(items);
-    for (const name of names) {
-      await createCategory({ name });
-      created += 1;
-    }
+    // Em lotes paralelos: 12 idas e voltas em série passavam de 5 s no Render.
+    const batch = await runInBatches(names, (name) => createCategory({ name }));
+    created += batch.done;
+    if (batch.failed) throw batch.error;
     return { ok: true, created, skipped: SUGGESTED_CATEGORIES.length - names.length };
   } catch (error) {
     return { ok: false, created, error };
@@ -32,16 +33,18 @@ export async function applyRulePack(): Promise<ApplyResult<{ missingCategories: 
       listAllPages((query) => listCategoryRules(query)),
     ]);
     const { toCreate, missingCategories } = rulesToCreate(categories.items, rules.items);
-    for (const rule of toCreate) {
-      await createCategoryRule({
+    // Em lotes paralelos: até 60 idas e voltas em série levavam uns 25 s no Render.
+    const batch = await runInBatches(toCreate, (rule) =>
+      createCategoryRule({
         categoryId: rule.categoryId,
         conditionField: "description",
         conditionOperator: "contains",
         conditionValue: rule.conditionValue,
         priority: rule.priority,
-      });
-      created += 1;
-    }
+      }),
+    );
+    created += batch.done;
+    if (batch.failed) throw batch.error;
     return { ok: true, created, missingCategories };
   } catch (error) {
     return { ok: false, created, error };
@@ -57,8 +60,7 @@ export async function createOneSuggestedCategory(name: string): Promise<ApplyRes
     return { ok: false, created: 0, error: new Error("Sugestão desconhecida.") };
   }
   try {
-    const { items } = await listAllPages((query) => listCategories(query));
-    if (items.some((category) => category.name === name)) return { ok: true, created: 0, skipped: 1 };
+    // Cria direto: o banco recusa nome repetido (409, tratado abaixo), sem ler a lista antes.
     await createCategory({ name });
     return { ok: true, created: 1, skipped: 0 };
   } catch (error) {
@@ -88,16 +90,17 @@ export async function addPackGroup(category: string): Promise<ApplyResult<{ crea
       pool = [...pool, await createCategory({ name: group.category })];
       createdCategory = true;
     }
-    for (const rule of rulesToCreate(pool, rules.items, [group]).toCreate) {
-      await createCategoryRule({
+    const batch = await runInBatches(rulesToCreate(pool, rules.items, [group]).toCreate, (rule) =>
+      createCategoryRule({
         categoryId: rule.categoryId,
         conditionField: "description",
         conditionOperator: "contains",
         conditionValue: rule.conditionValue,
         priority: rule.priority,
-      });
-      created += 1;
-    }
+      }),
+    );
+    created += batch.done;
+    if (batch.failed) throw batch.error;
     return { ok: true, created, createdCategory };
   } catch (error) {
     return { ok: false, created, error };
@@ -121,10 +124,9 @@ export async function setSuggestedGroupStatus(category: string, target: "active"
     const group = splitSuggestedRules(rules.items, categories.items).suggested.find((item) => item.category === category);
     const pending = (group?.rules ?? []).filter((rule) => rule.status !== "removed" && rule.status !== target);
     const operation = target === "active" ? activateCategoryRule : deactivateCategoryRule;
-    for (const rule of pending) {
-      await operation(rule.id);
-      changed += 1;
-    }
+    const batch = await runInBatches(pending, (rule) => operation(rule.id));
+    changed += batch.done;
+    if (batch.failed) throw batch.error;
     return { ok: true, created: changed };
   } catch (error) {
     return { ok: false, created: changed, error };
