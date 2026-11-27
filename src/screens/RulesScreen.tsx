@@ -518,7 +518,7 @@ export function RulesScreen({ onNavigate }: { onNavigate: (section: Section) => 
           <EmptyState
             icon={(color) => <IconRules size={24} color={color} />}
             title="Não foi possível carregar suas regras"
-            text="Pode ser uma falha momentânea de conexão. Suas regras não foram alteradas."
+            text="Pode ser uma falha momentânea de conexão ou o servidor ainda acordando (até 1 minuto). Tente de novo em alguns segundos. Suas regras não foram alteradas."
             action={
               <Button
                 variant="secondary"

@@ -228,7 +228,7 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
           <EmptyState
             icon={(color) => <IconAccounts size={24} color={color} />}
             title="Não foi possível carregar suas contas"
-            text="Pode ser uma falha momentânea de conexão. Suas contas não foram alteradas."
+            text="Pode ser uma falha momentânea de conexão ou o servidor ainda acordando (até 1 minuto). Tente de novo em alguns segundos. Suas contas não foram alteradas."
             action={
               <Button
                 variant="secondary"

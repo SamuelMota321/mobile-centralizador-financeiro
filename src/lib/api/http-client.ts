@@ -40,6 +40,28 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   idempotencyKey?: string;
 }
 
+/**
+ * Leituras (GET) repetem em falha de rede e em 429, 502, 503 e 504: no plano gratuito do Render o
+ * backend hiberna e a borda responde assim enquanto ele acorda. Escritas nunca repetem aqui, para
+ * não duplicar movimentações; quem escreve decide (a Idempotency-Key cobre o caso).
+ */
+export const RETRY_DELAYS_MS: readonly number[] = [1000, 2500, 5000];
+const RETRYABLE_STATUS: ReadonlySet<number> = new Set([429, 502, 503, 504]);
+/** Espera máxima aceita de um `Retry-After`: acima disso, melhor falhar e avisar. */
+const RETRY_AFTER_CAP_MS = 8000;
+
+function isRead(method: string | undefined): boolean {
+  return (method ?? "GET").toUpperCase() === "GET";
+}
+
+/** `Retry-After` em segundos; datas HTTP e valores absurdos são ignorados. */
+export function retryAfterMs(header: string | null): number | null {
+  if (header === null || !/^\d{1,3}$/.test(header.trim())) return null;
+  return Math.min(Number(header.trim()) * 1000, RETRY_AFTER_CAP_MS);
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -61,11 +83,27 @@ export async function apiRequest<T>(
     finalHeaders.set("idempotency-key", idempotencyKey);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}${buildQuery(query)}`, {
+  const url = `${apiBaseUrl}${path}${buildQuery(query)}`;
+  const init: RequestInit = {
     ...rest,
     headers: finalHeaders,
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
-  });
+  };
+
+  const retries = isRead(rest.method) ? RETRY_DELAYS_MS : [];
+  let response: Response | undefined;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      // Falha de rede: instância acordando ou conexão caiu. Sem tentativas sobrando, propaga.
+      if (attempt >= retries.length) throw error;
+      await sleep(retries[attempt]);
+      continue;
+    }
+    if (!RETRYABLE_STATUS.has(response.status) || attempt >= retries.length) break;
+    await sleep(Math.max(retries[attempt], retryAfterMs(response.headers.get("retry-after")) ?? 0));
+  }
 
   const raw = await response.text();
   const payload: unknown = raw.length > 0 ? safeJsonParse(raw) : undefined;

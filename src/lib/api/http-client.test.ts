@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { apiRequest, setTokenProvider } from "./http-client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { apiRequest, retryAfterMs, setTokenProvider } from "./http-client";
 
 function stubFetch(status: number, body?: unknown) {
   const fetchMock = vi.fn(async () =>
@@ -41,5 +41,69 @@ describe("apiRequest", () => {
     expect(request.init.body).toBe(form);
     expect(request.headers.has("content-type")).toBe(false);
     expect(request.headers.get("authorization")).toBe("Bearer token-ficticio");
+  });
+});
+
+describe("nova tentativa em leituras", () => {
+  afterEach(() => vi.useRealTimers());
+
+  function sequence(...steps: (number | Error)[]) {
+    setTokenProvider(() => undefined);
+    const fetchMock = vi.fn(async () => {
+      const step = steps.shift() ?? 200;
+      if (step instanceof Error) throw step;
+      return new Response(step === 200 ? '{"ok":true}' : "", { status: step });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("GET repete em 429 e 503 e depois funciona", async () => {
+    vi.useFakeTimers();
+    const fetchMock = sequence(429, 503, 200);
+    const promise = apiRequest<{ ok: boolean }>("/accounts");
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2500);
+    await expect(promise).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("GET repete em falha de rede", async () => {
+    vi.useFakeTimers();
+    const fetchMock = sequence(new TypeError("Network request failed"), 200);
+    const promise = apiRequest("/accounts");
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(promise).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("desiste depois de 3 repetições e devolve o erro", async () => {
+    vi.useFakeTimers();
+    const fetchMock = sequence(429, 429, 429, 429);
+    const assertion = expect(apiRequest("/accounts")).rejects.toMatchObject({ status: 429 });
+    await vi.advanceTimersByTimeAsync(1000 + 2500 + 5000);
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("não repete 401 nem escritas", async () => {
+    const unauthorized = sequence(401);
+    await expect(apiRequest("/accounts")).rejects.toMatchObject({ status: 401 });
+    expect(unauthorized).toHaveBeenCalledTimes(1);
+
+    const write = sequence(503);
+    await expect(apiRequest("/transactions", { method: "POST", body: { a: 1 } })).rejects.toMatchObject({ status: 503 });
+    expect(write).toHaveBeenCalledTimes(1);
+
+    const failedWrite = sequence(new TypeError("Network request failed"));
+    await expect(apiRequest("/transactions", { method: "PATCH", body: {} })).rejects.toBeInstanceOf(TypeError);
+    expect(failedWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("Retry-After em segundos vale com teto; datas são ignoradas", () => {
+    expect(retryAfterMs("3")).toBe(3000);
+    expect(retryAfterMs("999")).toBe(8000);
+    expect(retryAfterMs("Wed, 21 Oct 2026 07:28:00 GMT")).toBeNull();
+    expect(retryAfterMs(null)).toBeNull();
   });
 });

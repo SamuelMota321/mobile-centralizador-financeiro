@@ -380,7 +380,7 @@ export function CategoriesScreen({
           <EmptyState
             icon={(color) => <IconCategories size={24} color={color} />}
             title="Não foi possível carregar suas categorias"
-            text="Pode ser uma falha momentânea de conexão. Suas categorias não foram alteradas."
+            text="Pode ser uma falha momentânea de conexão ou o servidor ainda acordando (até 1 minuto). Tente de novo em alguns segundos. Suas categorias não foram alteradas."
             action={
               <Button
                 variant="secondary"

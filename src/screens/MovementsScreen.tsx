@@ -458,7 +458,7 @@ export function MovementsScreen({
           <EmptyState
             icon={(color) => <IconMovements size={24} color={color} />}
             title="Não foi possível carregar suas movimentações"
-            text="Pode ser uma falha momentânea de conexão. Seus dados não foram alterados."
+            text="Pode ser uma falha momentânea de conexão ou o servidor ainda acordando (até 1 minuto). Tente de novo em alguns segundos. Seus dados não foram alterados."
             action={
               <Button
                 variant="secondary"
