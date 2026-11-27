@@ -32,22 +32,23 @@ Organiza dados manuais, OFX e Pluggy Sandbox sem se comportar como banco: não m
 
 ## Capabilities and Constraints
 
+- Categorias e regras sugeridas são opcionais: a pessoa escolhe criá-las (conjunto básico de categorias e um pacote de regras "descrição contém" que ela pode ver antes) e, depois de criadas, elas pertencem a ela como qualquer outra. Nada é criado sem pedido.
 - Estados de categorização sempre explícitos: sem categoria, categorizada (definida pelo usuário ou aplicada por regra), incerta, não reconhecida, não se aplica (transferências).
 - Nenhuma precisão de categorização é declarada sem conjunto de dados e evidência executada.
 - Recursos inexistentes, de outro tenant ou arquivados recebem a mesma mensagem neutra.
 - Fora do MVP: PDF, impostos, alertas, notificações, cobrança, dados reais, painel administrativo. Pix e movimentação de fundos estão permanentemente excluídos.
-- Saldo atual e totais pertencem ao dashboard (sprint futura); a interface não calcula nem insinua saldos consolidados antes disso.
+- Movimentações mostra entradas, saídas e balanço do período filtrado, calculados dos lançamentos (sem transferências nem estornos) e só quando o período inteiro foi lido; nunca um número parcial. Saldo atual de contas, patrimônio e demais totais consolidados continuam pertencendo ao dashboard.
 
 ## Brand Commitments
 
-- Identidade definida no Style Guide 1.0 (`documentacao-centralizador-financeiro/docs/design/style-guide.html`): princípios de segurança institucional, clareza progressiva e tranquilidade.
+- Identidade definida no Style Guide 2.0 (`documentacao-centralizador-financeiro/docs/design/style-guide.html`), direção "Instrumento de precisão": princípios de segurança institucional, clareza progressiva e tranquilidade, expressos em neutros frios, verde como sinal e dados em tabelas.
 - Nome "Coinciente" (Coin + consciente); símbolo de dois "C" concêntricos com ponto central (`src/ui/brand.tsx`). Não distorcer, contornar ou recolorir com cores de status.
 - Voz humana no tom e precisa no conteúdo: explica sem infantilizar, orienta sem aconselhar. Nunca promete rentabilidade, enriquecimento ou "inteligência".
 - Português do Brasil correto, com acentuação.
 
 ## Evidence on Hand
 
-- Documentação do projeto: Visão 1.3, PRD 1.4, especificações e Style Guide 1.0, com mockups de produto (web e mobile) e dados fictícios de exemplo.
+- Documentação do projeto: Visão 1.3, PRD 1.4, especificações e Style Guide 2.0, com mockups de produto (web e mobile) e dados fictícios de exemplo.
 - Não há depoimentos, clientes, métricas de uso nem benchmarks; nada disso deve ser inventado.
 
 ## Product Principles

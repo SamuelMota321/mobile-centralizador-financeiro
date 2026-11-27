@@ -2,44 +2,44 @@
 name: Coinciente (mobile)
 description: Clareza para cuidar do que é seu.
 colors:
-  background: "#f2f6f4"
+  background: "#f6f7f7"
   surface: "#ffffff"
-  surface-soft: "#f7faf8"
-  foreground: "#14231e"
-  body-text: "#354a42"
-  muted: "#60736b"
-  line: "#dbe5e0"
-  input-border: "#7a8f86"
-  primary: "#087a55"
-  primary-pressed: "#056746"
-  primary-tint: "#e6f1ec"
-  on-primary: "#ffffff"
+  sunken: "#eff1f1"
+  line: "#e2e5e5"
+  line-strong: "#c9cfce"
+  input-border: "#808a87"
+  foreground: "#0f1413"
+  text-secondary: "#434d4a"
+  text-tertiary: "#5f6966"
+  signal: "#087a55"
+  signal-pressed: "#056746"
+  on-signal: "#ffffff"
   positive: "#087a55"
   negative: "#b5473f"
-  warning: "#a86512"
+  warning: "#9a5d0f"
   info: "#2b6f89"
-  dark-background: "#0c1714"
-  dark-surface: "#13231e"
-  dark-surface-soft: "#192c26"
-  dark-foreground: "#edf6f2"
-  dark-body-text: "#d0dfd8"
-  dark-muted: "#a6b9b0"
-  dark-line: "#284038"
-  dark-input-border: "#5f7a70"
-  dark-primary: "#55d6a4"
-  dark-primary-pressed: "#7ce8bd"
-  dark-primary-tint: "#1b3a30"
-  dark-on-primary: "#07140f"
+  dark-background: "#0a0c0c"
+  dark-surface: "#101313"
+  dark-sunken: "#0d1010"
+  dark-line: "#232828"
+  dark-line-strong: "#323939"
+  dark-input-border: "#5e6865"
+  dark-foreground: "#e9edec"
+  dark-text-secondary: "#aab3b0"
+  dark-text-tertiary: "#87918e"
+  dark-signal: "#55d6a4"
+  dark-signal-pressed: "#7ce8bd"
+  dark-on-signal: "#07140f"
   dark-negative: "#ff9188"
   dark-warning: "#f3b866"
   dark-info: "#75c4df"
 typography:
   page-title:
-    fontFamily: "Manrope_700Bold"
-    fontSize: "24px"
-    lineHeight: "30px"
+    fontFamily: "Manrope_600SemiBold"
+    fontSize: "22px"
+    lineHeight: "28px"
   section-title:
-    fontFamily: "Manrope_700Bold"
+    fontFamily: "Manrope_600SemiBold"
     fontSize: "16px"
     lineHeight: "22px"
   body:
@@ -48,29 +48,36 @@ typography:
     lineHeight: "22px"
   body-small:
     fontFamily: "Manrope_500Medium"
-    fontSize: "14px"
-    lineHeight: "20px"
-  label:
-    fontFamily: "Manrope_600SemiBold"
     fontSize: "13px"
     lineHeight: "18px"
-  micro:
-    fontFamily: "Manrope_600SemiBold"
+  meta:
+    fontFamily: "Manrope_500Medium"
     fontSize: "12px"
     lineHeight: "16px"
+  label:
+    fontFamily: "Manrope_600SemiBold"
+    fontSize: "11px"
+    lineHeight: "14px"
+    letterSpacing: "0.66px"
+    textTransform: "uppercase"
   amount:
-    fontFamily: "Manrope_800ExtraBold"
+    fontFamily: "Manrope_600SemiBold"
     fontSize: "15px"
     lineHeight: "20px"
+  figure:
+    fontFamily: "Manrope_600SemiBold"
+    fontSize: "32px"
+    lineHeight: "38px"
   display:
     fontFamily: "Newsreader_400Regular"
     fontSize: "40px"
     lineHeight: "44px"
 rounded:
-  control: "10px"
-  panel: "14px"
-  frame: "20px"
-  pill: "999px"
+  marker: "1px"
+  control: "8px"
+  panel: "10px"
+  sheet: "16px"
+  avatar: "999px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -80,59 +87,104 @@ spacing:
   2xl: "24px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.signal}"
+    textColor: "{colors.on-signal}"
     rounded: "{rounded.control}"
     height: "48px"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.foreground}"
+    borderColor: "{colors.line-strong}"
     rounded: "{rounded.control}"
     height: "48px"
   input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.foreground}"
+    borderColor: "{colors.input-border}"
     rounded: "{rounded.control}"
     height: "48px"
   list-group:
     backgroundColor: "{colors.surface}"
+    borderColor: "{colors.line}"
     rounded: "{rounded.panel}"
+  list-row:
+    minHeight: "56px"
   tab-active:
-    textColor: "{colors.primary}"
+    textColor: "{colors.foreground}"
+    indicator: "2px {colors.signal}"
+  marker:
+    size: "6px"
+    rounded: "{rounded.marker}"
+    textColor: "{colors.text-secondary}"
 ---
 
 # Coinciente — sistema visual do app mobile
 
-Mesma identidade do web e do Style Guide 1.0, traduzida para toque. Quando divergir do guia, o guia vence.
+> **Versão 2.0 aprovada; o código ainda segue a 1.x até a fase de aplicação.** Enquanto a aplicação não acontecer, `src/theme.ts` e os componentes de `src/ui/` continuam com a paleta esverdeada e as etiquetas em pílula. Telas novas devem nascer na 2.0.
+
+Mesma identidade do web e do Style Guide 2.0 ("Instrumento de precisão"), traduzida para toque. Quando divergir do guia, o guia vence.
 
 ## Overview
 
-App de tarefa curta ("Operate"): resumo primeiro, profundidade quando solicitada, como no exemplo mobile do guia. Cabeçalho com o símbolo Coinciente; conteúdo em grupos de lista; navegação por abas na parte de baixo (Movimentações, Contas, Categorias) com ícone e texto. Formulários ocupam a tela inteira, com "Cancelar" no topo e a ação principal fixa no rodapé, acima do teclado.
+App de tarefa curta ("Operate"): o número principal abre a tela e a lista vem logo abaixo, como no exemplo mobile do guia. Cabeçalho em `surface` com o símbolo e linha inferior; conteúdo em grupos de lista com divisórias; navegação por abas na parte de baixo (Movimentações, Contas, Categorias) com ícone e texto, e a aba atual marcada por uma linha `signal` de 2px. Formulários ocupam a tela inteira, com "Cancelar" no topo e a ação principal fixa no rodapé, acima do teclado. Planejado (ADR-003): tarefas curtas, como categorizar, passam a abrir em folha inferior; formulários longos continuam em tela cheia.
 
 ## Colors
 
-Mesmos papéis do web: neutros esverdeados; verde só em ação, seleção e estado; positivo e negativo sempre com sinal ou texto. Tema claro e escuro seguem o sistema (`useColorScheme`); o escuro preserva temperatura e hierarquia, nunca preto puro.
+Mesmos papéis e valores do web: neutros frios carregam a interface e o verde é **sinal** — só em ação primária, foco, aba ou item selecionado, marcador positivo e "+" de entradas. Positivo e negativo sempre com sinal ou texto. Tema claro e escuro seguem o sistema (`useColorScheme`); o escuro é quase preto e neutro, sem tom esverdeado. Contrastes medidos iguais aos do web (texto terciário ≥ 5,0:1; `signal` ≥ 4,7:1; `warning` ajustado para #9A5D0F, ≥ 4,69:1; borda de campo ≥ 3,14:1).
 
 ## Typography
 
-Manrope em toda a interface, um arquivo de fonte por peso (500, 600, 700, 800). Newsreader só na tela de entrada. Números em coluna usam `fontVariant: ["tabular-nums"]`. Tamanhos respeitam a fonte dinâmica do sistema (sem `allowFontScaling={false}`).
+Manrope em toda a interface, um arquivo de fonte por peso (500, 600, 700, 800), inclusive o número principal (`figure`, 32px/600). Newsreader só na tela de entrada. Todo número usa `fontVariant: ["tabular-nums"]` e fica alinhado à direita nas linhas. Rótulos de grupo e da faixa de números usam `label` (11px, caixa alta, espaçado); proveniência usa `meta` (12px). Tamanhos respeitam a fonte dinâmica do sistema (sem `allowFontScaling={false}`).
 
 ## Layout
 
-Margem lateral de 20px; áreas seguras respeitadas no topo e no rodapé (notch e barra de gestos). Listas agrupadas em um único painel com divisórias; linhas com alvo de toque mínimo de 44px.
+Margem lateral de 16px; áreas seguras respeitadas no topo e no rodapé (notch e barra de gestos). Listas agrupadas em um único painel com divisórias de 1px; cada linha tem o título e o valor na primeira linha e a linha de metadados (ou o marcador) na segunda, com alvo de toque mínimo de 44pt e altura mínima de 56px. Grupos por dia com cabeçalho em `sunken`.
 
 ## Elevation & Depth
 
-Sem sombras em conteúdo: grupos usam borda `line`. A barra de abas separa-se do conteúdo por uma borda superior.
+Sem sombras em conteúdo: grupos usam borda `line`. A barra de abas e o cabeçalho separam-se do conteúdo por uma linha de 1px. Só a folha inferior (planejada) e os alertas do sistema ficam por cima.
 
 ## Shapes
 
-10px em controles, 14px em grupos de lista, 20px em molduras. Pílula só em etiquetas de status.
+1px no marcador; 8px em controles; 10px em grupos de lista; 16px no topo da folha inferior; círculo só no avatar. Sem pílulas.
+
+## Motion
+
+Hoje: nenhuma animação. O retorno ao toque troca o estilo na hora, com valores diferentes por componente (botão 0,88 + escala 0,98; linhas 0,7; chips 0,85), e não há tratamento de redução de movimento. O que segue é planejado (F5 do Plano de Refatoração do Frontend, ADR-003 em `documentacao-centralizador-financeiro/docs/arquitetura/`) e adapta a seção Movimento do Style Guide 2.0 ao toque, com os mesmos nomes de token do web.
+
+| Momento | Movimento | Token |
+| --- | --- | --- |
+| Toque | entrada no estado pressionado imediata; volta com spring; um único par de opacidade e escala para todo o app | `--motion-feedback` |
+| Troca de aba | só a transição nativa das abas | — |
+| Formulário longo, Regras, OFX, Conectar | transição nativa da pilha, com gesto de voltar | — |
+| Tarefa curta (categorizar) | folha inferior que entra pela borda e acompanha o gesto | `--motion-reveal`, `--ease-drawer` |
+| Carregando → conteúdo | esqueleto se dissolve no conteúdo | `--motion-reveal` |
+| Ação concluída | haptic leve; nenhum em toque de rotina | — |
+
+Não se movem: valores, troca de aba além do nativo, linhas de lista ao rolar. Com "Reduzir movimento" ativo no sistema (`useReducedMotion`), sai todo deslocamento e escala e ficam as mudanças de opacidade.
 
 ## Components
 
-Botão (primário, secundário, perigo, texto) com altura 48, retorno ao toque (opacidade e escala 0,98) e estado carregando; campo de texto com rótulo acima e erro abaixo; grupo de escolha exposto como rádio; etiqueta de status com ponto + texto; aviso com ícone; estado vazio que ensina; esqueleto durante o carregamento.
+Botão (primário `signal`, secundário com contorno `line-strong`, perigo, texto) com altura 48 e estado carregando; campo de texto de 48 com borda `input-border`, rótulo acima e erro abaixo; grupo de escolha exposto como rádio; **marcador** (quadrado de 6px + texto, sem fundo) no lugar da etiqueta em pílula; **linha de metadados** (`Origem · ref. DD/MM · Conta`) abaixo do dado; aviso com ícone e borda à esquerda no tom do estado; estado vazio que ensina; esqueleto com a forma da lista.
+
+## Categorias e Regras (Style Guide 2.2)
+
+Doze cores de categoria (`theme.ts`: `categories`, `categoryOther`, `onCategory`), fixas pela ordem de criação das categorias da pessoa (arquivadas incluídas); da 13ª em diante, neutra. Só identificam a categoria, nunca estado, ganho ou perda, e o nome vem sempre escrito ao lado. O ícone sai do nome (`lib/categories/category-icon.ts`) e vai num círculo cheio (`CategoryBadge`, decorativo). A fileira de sugeridas (`CategoryTile`) mostra o estado no círculo (cheio, tracejado, apagado), num selo e no texto. Blocos de seção (`SectionCard`, `CollapsibleCard`) e faixa de destaque (`Banner`): **sem gradiente no mobile**, só borda no verde e ícone no verde; a exceção de gradiente do web não se aplica aqui. Listas com 10 itens por página (`Pager`: Anterior, "X de Y", Próxima), no lugar da rolagem infinita. Valores por categoria só quando o período inteiro foi lido; despesas sem categoria ou incertas ficam sempre visíveis em "A revisar". Sem minigráfico na linha (a coluna estreita não comporta).
+
+## Fundo decorativo (Style Guide 2.3)
+
+Versão **estática** e **só no tema escuro**: três ondas verdes em camadas e um brilho suave atrás do cabeçalho e do título (`Backdrop`, `src/ui/backdrop.tsx`, 240px; 300px na entrada), com fade para o fundo. Fica atrás de tudo, sem tocar e fora da leitura de tela; sem animação (não há `reanimated` no projeto, e o ambiente do web não se aplica ao celular). Não aparece em formulários, nas abas nem atrás de listas. No claro não desenha: o texto secundário já está em 4,63:1 sobre o fundo e só 0,03 de intensidade mantém 4,5:1, o que seria invisível. Escuro com `decoAlpha` 0,22: medido no pior caso (três ondas coincidindo, linha a linha) com `scripts/deco-contrast.py`, nenhuma faixa abaixo de 4,5:1. Refazer a medição se mudar cor, onda ou fade. Ganhar o claro exigiria escurecer o `muted` do tema claro, o que muda todos os textos secundários e pede um plano à parte.
+
+## Bens e dívidas
+
+Abre a partir de **Contas** (faixa no fim da lista), sem aba própria: a barra de abas já tem 5 itens, e Contas continua marcada enquanto a tela está aberta. Três blocos de seção (`SectionCard`): Bens, Financiamentos e Outras dívidas, cada um com contagem, botão de criar e **paginação de 10 por página, independente**; a falha de uma seção não esconde as outras. A linha mostra, para o bem, o círculo neutro do tipo (`AssetBadge`: casa, carro ou genérico, por palavra inteira do tipo, que é texto livre), o nome, o **valor estimado** e duas linhas de metadado com dados reais: "Avaliado em dd/mm/aaaa · há N meses" (anos só a partir de 24 meses) e "Fonte: …". O financiamento mostra o bem associado; a dívida não tem tipo no backend, então sem ícone. Tocar na linha abre **Editar** e **Histórico** (versões do item, com data e hora de Brasília e a marca "atual"). Criar e editar em tela cheia (`FormScreen`). Sem fotos, sem histórico geral e sem instituição (não há campo nem rota). Aviso fixo: os valores são informados pela pessoa e o app não soma nem calcula patrimônio.
+
+## Primeiros passos e Investimentos
+
+**Primeiros passos** (topo de Movimentações): cartão numerado com os três passos (criar conta, registrar movimentação, criar categorias), "N de 3 concluídos" e o botão só no passo atual; some sozinho quando tudo está feito e **não aparece** se contas, categorias ou histórico não carregaram (não adivinha). "Criar conta" e "Criar categoria" abrem a tela já no formulário de criação. Enquanto o cartão aparece, somem os avisos de "sem contas" e "sem movimentações" que repetiriam a mensagem.
+
+**Investimentos** abre a partir de Contas (segundo atalho, ao lado de Bens e dívidas), sem aba própria. Resumo 2×2: total (valor ou "Sem total" com a frase que o contrato permite), por moeda (sem conversão), disponibilidade **por conexão** (barra com contagem e % escritos; indisponível mais apagado) e última atualização. Composição de **uma moeda por vez** (chips de moeda), barra 100% empilhada por classe com legenda escrita e lista por instituição; moedas nunca são misturadas. Posições em lista, com a bolinha da classe (tracejada quando a posição não entra na composição), taxa e resultado informado pela fonte só quando existem, e a etiqueta de **Dados** (indisponível vence). Cores das classes vêm das seis primeiras cores de categoria. Nenhuma rentabilidade é calculada. "Atualizar dados" (rodapé) pede a sincronização de cada conexão, em lotes, e mostra o resultado em aviso; não acompanha o andamento. Horário de Brasília calculado em UTC-3 à mão. Prévia com dados de exemplo atrás de `EXPO_PUBLIC_INVESTMENTS_PREVIEW=true`.
 
 ## Do's and Don'ts
 
-Faça: mostrar data e origem; linguagem simples; ação nomeada em cada botão; erro com problema e recuperação. Evite: cor como único indicador; spinners no meio do conteúdo; texto sem acento; promessas financeiras; qualquer vocabulário de banco (enviar, Pix, pagar).
+Faça: mostrar data e origem como linha de metadados; linguagem simples; ação nomeada em cada botão; erro com problema e recuperação; verde só como sinal. Evite: cor como único indicador; spinners no meio do conteúdo; pílulas e fundos verdes; sombras em conteúdo; texto sem acento; promessas financeiras; qualquer vocabulário de banco (enviar, Pix, pagar).

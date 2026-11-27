@@ -10,20 +10,26 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
+import { overviewPreviewEnabled } from "../lib/overview/flag";
 import { makeStyles, radius, type, useTheme } from "../theme";
+import { Backdrop } from "./backdrop";
 import { BrandLockup } from "./brand";
 import {
   IconAccounts,
   IconCategories,
+  IconChevronLeft,
   IconClose,
   IconMovements,
+  IconOverview,
   IconRules,
   IconSignOut,
 } from "./icons";
 
-export type Section = "movimentacoes" | "contas" | "categorias" | "regras";
+export type Section = "visao-geral" | "movimentacoes" | "contas" | "categorias" | "regras" | "patrimonio" | "investimentos";
 
+const SHOW_OVERVIEW = overviewPreviewEnabled();
 const TABS = [
+  ...(SHOW_OVERVIEW ? [{ section: "visao-geral", label: "Visão geral", Icon: IconOverview } as const] : []),
   { section: "movimentacoes", label: "Movimentações", Icon: IconMovements },
   { section: "contas", label: "Contas", Icon: IconAccounts },
   { section: "categorias", label: "Categorias", Icon: IconCategories },
@@ -41,6 +47,8 @@ export function AppScreen({
   subtitle,
   children,
   footer,
+  onBack,
+  backLabel = "Voltar",
 }: {
   section: Section;
   onNavigate: (section: Section) => void;
@@ -49,14 +57,27 @@ export function AppScreen({
   children: ReactNode;
   /** Ação principal fixa acima das abas. */
   footer?: ReactNode;
+  /** Telas abertas a partir de outra seção (sem aba própria): mostra "Voltar" e atende o Voltar do Android. */
+  onBack?: () => void;
+  backLabel?: string;
 }) {
   const styles = useAppStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
 
+  useEffect(() => {
+    if (!onBack) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [onBack]);
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <Backdrop />
       <View style={styles.header}>
         <BrandLockup />
         <Pressable
@@ -72,6 +93,18 @@ export function AppScreen({
       </View>
 
       <View style={styles.titleBlock}>
+        {onBack ? (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel={backLabel}
+            hitSlop={8}
+            style={({ pressed }) => [styles.back, pressed && styles.pressed]}
+          >
+            <IconChevronLeft size={20} color={colors.primary} />
+            <Text style={styles.backLabel}>{backLabel}</Text>
+          </Pressable>
+        ) : null}
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>
@@ -87,7 +120,8 @@ export function AppScreen({
         accessibilityRole="tablist"
       >
         {TABS.map(({ section: target, label, Icon }) => {
-          const selected = target === section;
+          // Bens e dívidas e Investimentos não têm aba própria: abrem a partir de Contas, que continua marcada.
+          const selected = target === (section === "patrimonio" || section === "investimentos" ? "contas" : section);
           const color = selected ? colors.primary : colors.muted;
           return (
             <Pressable
@@ -102,10 +136,15 @@ export function AppScreen({
                 <Icon size={22} color={color} />
               </View>
               <Text
-                style={[styles.tabLabel, { color }, selected && styles.tabLabelSelected]}
-                numberOfLines={1}
+                style={[
+                  styles.tabLabel,
+                  SHOW_OVERVIEW && styles.tabLabelCompact,
+                  { color },
+                  selected && styles.tabLabelSelected,
+                ]}
+                numberOfLines={SHOW_OVERVIEW ? 2 : 1}
               >
-                {label}
+                {SHOW_OVERVIEW && target === "movimentacoes" ? "Movimentos" : label}
               </Text>
             </Pressable>
           );
@@ -127,6 +166,8 @@ const useAppStyles = makeStyles((c) => ({
   signOut: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: 4 },
   signOutLabel: { ...type.label, color: c.muted },
   titleBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 2 },
+  back: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, alignSelf: "flex-start", marginLeft: -4 },
+  backLabel: { ...type.label, color: c.primary },
   title: { ...type.pageTitle, color: c.foreground },
   subtitle: { ...type.bodySmall, color: c.muted },
   content: { flex: 1 },
@@ -141,6 +182,7 @@ const useAppStyles = makeStyles((c) => ({
   tab: { flex: 1, alignItems: "center", gap: 2, minHeight: 52, justifyContent: "center" },
   tabIcon: {
     width: 56,
+    maxWidth: "100%",
     height: 30,
     borderRadius: radius.pill,
     alignItems: "center",
@@ -148,6 +190,7 @@ const useAppStyles = makeStyles((c) => ({
   },
   tabIconSelected: { backgroundColor: c.primaryTint },
   tabLabel: { ...type.micro, fontFamily: "Manrope_600SemiBold" },
+  tabLabelCompact: { fontSize: 11, lineHeight: 14, textAlign: "center", maxWidth: "100%" },
   tabLabelSelected: { fontFamily: "Manrope_700Bold" },
   pressed: { opacity: 0.7 },
 }));

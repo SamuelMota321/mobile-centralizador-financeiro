@@ -6,15 +6,20 @@ import { Manrope_800ExtraBold } from "@expo-google-fonts/manrope/800ExtraBold";
 import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { AccountsScreen } from "./src/screens/AccountsScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
+import { InvestmentsScreen } from "./src/screens/InvestmentsScreen";
 import { MovementsScreen } from "./src/screens/MovementsScreen";
+import { OverviewScreen } from "./src/screens/OverviewScreen";
+import { PatrimonyScreen } from "./src/screens/PatrimonyScreen";
 import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
+import type { MovementFilters } from "./src/screens/movement-presentation";
+import { overviewPreviewEnabled } from "./src/lib/overview/flag";
 import { useTheme } from "./src/theme";
 import type { Section } from "./src/ui/screens";
 
@@ -51,7 +56,25 @@ function Splash() {
 
 function Root() {
   const { status } = useAuth();
-  const [section, setSection] = useState<Section>("movimentacoes");
+  const [section, setSection] = useState<Section>(overviewPreviewEnabled() ? "visao-geral" : "movimentacoes");
+  // Filtros com que Movimentações abre quando chega de Categorias ("Ver lançamentos", "Revisar").
+  const [movementsPreset, setMovementsPreset] = useState<Partial<MovementFilters> | null>(null);
+  // "Criar conta" e "Criar categoria" dos Primeiros passos abrem a tela já no formulário de criação.
+  const [startCreating, setStartCreating] = useState(false);
+  const navigate = useCallback((next: Section) => {
+    setMovementsPreset(null);
+    setStartCreating(false);
+    setSection(next);
+  }, []);
+  const createIn = useCallback((next: "contas" | "categorias") => {
+    setMovementsPreset(null);
+    setStartCreating(true);
+    setSection(next);
+  }, []);
+  const openMovements = useCallback((preset: Partial<MovementFilters>) => {
+    setMovementsPreset(preset);
+    setSection("movimentacoes");
+  }, []);
 
   if (status === "loading") return <Splash />;
   if (status !== "authenticated") return <SignInScreen />;
@@ -59,13 +82,19 @@ function Root() {
   // Ao sair, Root troca para SignInScreen e desmonta as telas: nenhum dado do tenant
   // anterior permanece em estado.
   switch (section) {
+    case "visao-geral":
+      return <OverviewScreen onNavigate={navigate} />;
     case "movimentacoes":
-      return <MovementsScreen onNavigate={setSection} />;
+      return <MovementsScreen key={movementsPreset ? "preset" : "default"} onNavigate={navigate} onCreateIn={createIn} initialFilters={movementsPreset ?? undefined} />;
     case "contas":
-      return <AccountsScreen onNavigate={setSection} />;
+      return <AccountsScreen onNavigate={navigate} startCreating={startCreating} />;
     case "categorias":
-      return <CategoriesScreen onNavigate={setSection} />;
+      return <CategoriesScreen onNavigate={navigate} onOpenMovements={openMovements} startCreating={startCreating} />;
     case "regras":
-      return <RulesScreen onNavigate={setSection} />;
+      return <RulesScreen onNavigate={navigate} />;
+    case "patrimonio":
+      return <PatrimonyScreen onNavigate={navigate} />;
+    case "investimentos":
+      return <InvestmentsScreen onNavigate={navigate} />;
   }
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { makeStyles, radius, type, useTheme, type ThemeColors } from "../theme";
 import { IconAlert, IconCheck, IconInfo } from "./icons";
@@ -256,25 +256,48 @@ const useEmptyStyles = makeStyles((c) => ({
 // ---------- Esqueleto ----------
 
 /** Linhas com a forma da lista durante o carregamento; nunca um spinner no meio da tela. */
+/** Quanto esperar antes de avisar: acima disso, "carregando" já parece travado. */
+export const SLOW_LOAD_MS = 6000;
+
+/** Verdadeiro depois de `SLOW_LOAD_MS` montado: o servidor gratuito hiberna e acordar leva até 1 minuto. */
+function useSlowLoad(): boolean {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), SLOW_LOAD_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return slow;
+}
+
 export function SkeletonList({ rows = 5 }: { rows?: number }) {
   const styles = useSkeletonStyles();
+  const slow = useSlowLoad();
   return (
-    <View style={styles.group} accessibilityLabel="Carregando" accessible>
-      {Array.from({ length: rows }, (_, index) => (
-        <View key={index} style={[styles.row, index > 0 && styles.divider]}>
-          <View style={styles.square} />
-          <View style={styles.lines}>
-            <View style={[styles.line, { width: `${70 - index * 6}%` }]} />
-            <View style={[styles.line, styles.lineShort]} />
+    <View style={styles.wrap}>
+      {slow ? (
+        <Notice
+          tone="info"
+          text="Ainda carregando. O servidor pode estar acordando depois de um tempo parado, o que leva até 1 minuto. Não precisa reabrir o app."
+        />
+      ) : null}
+      <View style={styles.group} accessibilityLabel="Carregando" accessible>
+        {Array.from({ length: rows }, (_, index) => (
+          <View key={index} style={[styles.row, index > 0 && styles.divider]}>
+            <View style={styles.square} />
+            <View style={styles.lines}>
+              <View style={[styles.line, { width: `${70 - index * 6}%` }]} />
+              <View style={[styles.line, styles.lineShort]} />
+            </View>
+            <View style={[styles.line, styles.amount]} />
           </View>
-          <View style={[styles.line, styles.amount]} />
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 }
 
 const useSkeletonStyles = makeStyles((c) => ({
+  wrap: { gap: 12 },
   group: {
     borderRadius: radius.panel,
     borderWidth: 1,

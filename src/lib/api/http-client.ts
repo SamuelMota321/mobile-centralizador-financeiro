@@ -40,6 +40,104 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   idempotencyKey?: string;
 }
 
+/**
+ * Leituras (GET) repetem em falha de rede e em 429, 502, 503 e 504: no plano gratuito do Render o
+ * backend hiberna e a borda responde assim enquanto ele acorda. Escritas nunca repetem aqui, para
+ * não duplicar movimentações; quem escreve decide (a Idempotency-Key cobre o caso).
+ */
+export const RETRY_DELAYS_MS: readonly number[] = [1000, 2500, 5000];
+/**
+ * 429 é a borda do Render bloqueando rajadas, e o bloqueio dura mais que um 5xx: espera maior,
+ * com um pouco de aleatoriedade para as chamadas que falharam juntas não voltarem juntas.
+ */
+export const RATE_LIMIT_DELAYS_MS: readonly number[] = [2000, 5000, 10000, 20000];
+const RETRYABLE_STATUS: ReadonlySet<number> = new Set([429, 502, 503, 504]);
+/** Espera máxima aceita de um `Retry-After`: acima disso, melhor falhar e avisar. */
+const RETRY_AFTER_CAP_MS = 8000;
+const RATE_LIMIT_AFTER_CAP_MS = 30000;
+
+function isRead(method: string | undefined): boolean {
+  return (method ?? "GET").toUpperCase() === "GET";
+}
+
+/** `Retry-After` em segundos; datas HTTP e valores absurdos são ignorados. */
+export function retryAfterMs(header: string | null, cap: number = RETRY_AFTER_CAP_MS): number | null {
+  if (header === null || !/^\d{1,3}$/.test(header.trim())) return null;
+  return Math.min(Number(header.trim()) * 1000, cap);
+}
+
+/** Até 20% a mais: chamadas que falharam juntas não tentam de novo no mesmo instante. */
+function jitter(ms: number): number {
+  return Math.round(ms * (1 + Math.random() * 0.2));
+}
+
+/**
+ * Teto de chamadas simultâneas ao backend neste processo. Uma tela pode pedir várias listas de uma
+ * vez; sem teto, a rajada chega à borda do Render de uma só vez e leva 429. As que passam do teto
+ * esperam na fila (o tempo de espera não conta no tempo limite da leitura).
+ */
+export const MAX_CONCURRENT_REQUESTS = 3;
+let activeRequests = 0;
+const waitingRequests: (() => void)[] = [];
+
+async function withSlot<T>(task: () => Promise<T>): Promise<T> {
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS) await new Promise<void>((resolve) => waitingRequests.push(resolve));
+  else activeRequests += 1;
+  try {
+    return await task();
+  } finally {
+    // A vaga passa direto para o próximo da fila, sem abrir espaço para um furo.
+    const next = waitingRequests.shift();
+    if (next) next();
+    else activeRequests -= 1;
+  }
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Tempo limite de cada leitura (inclui ler o corpo). Cobre uma instância que acorda devagar demais ou
+ * uma conexão aberta e muda: estourou, a tela cai no erro com "Tentar de novo" em vez de esperar para
+ * sempre. Não repete (a nova tentativa é do usuário, quando a instância já acordou). Escritas não têm
+ * tempo limite aqui: abortar um POST que o servidor já aceitou pode duplicar o registro.
+ */
+export const REQUEST_TIMEOUT_MS = 45_000;
+
+export class RequestTimeoutError extends Error {
+  constructor() {
+    super("A requisição ao servidor passou do tempo limite.");
+    this.name = "RequestTimeoutError";
+  }
+}
+
+async function fetchRead(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
+  const controller = new AbortController();
+  const caller = init.signal;
+  const onCallerAbort = () => controller.abort();
+  if (caller?.aborted) controller.abort();
+  else caller?.addEventListener("abort", onCallerAbort, { once: true });
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    return { response, raw: await response.text() };
+  } catch (error) {
+    if (timedOut) throw new RequestTimeoutError();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    caller?.removeEventListener("abort", onCallerAbort);
+  }
+}
+
+async function fetchWrite(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
+  const response = await fetch(url, init);
+  return { response, raw: await response.text() };
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -61,13 +159,34 @@ export async function apiRequest<T>(
     finalHeaders.set("idempotency-key", idempotencyKey);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}${buildQuery(query)}`, {
+  const url = `${apiBaseUrl}${path}${buildQuery(query)}`;
+  const init: RequestInit = {
     ...rest,
     headers: finalHeaders,
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
-  });
+  };
 
-  const raw = await response.text();
+  const reading = isRead(rest.method);
+  const send = reading ? fetchRead : fetchWrite;
+  let result: { response: Response; raw: string };
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      result = await withSlot(() => send(url, init));
+    } catch (error) {
+      // Falha de rede: instância acordando ou conexão caiu. Escritas, tempo limite e tentativas esgotadas propagam.
+      if (!reading || error instanceof RequestTimeoutError || attempt >= RETRY_DELAYS_MS.length) throw error;
+      await sleep(jitter(RETRY_DELAYS_MS[attempt]));
+      continue;
+    }
+    if (!reading) break;
+    const status = result.response.status;
+    if (!RETRYABLE_STATUS.has(status)) break;
+    const schedule = status === 429 ? RATE_LIMIT_DELAYS_MS : RETRY_DELAYS_MS;
+    if (attempt >= schedule.length) break;
+    const hinted = retryAfterMs(result.response.headers.get("retry-after"), status === 429 ? RATE_LIMIT_AFTER_CAP_MS : RETRY_AFTER_CAP_MS) ?? 0;
+    await sleep(Math.max(jitter(schedule[attempt]), hinted));
+  }
+  const { response, raw } = result;
   const payload: unknown = raw.length > 0 ? safeJsonParse(raw) : undefined;
 
   if (!response.ok) {

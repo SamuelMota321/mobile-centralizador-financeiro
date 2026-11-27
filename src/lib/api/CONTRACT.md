@@ -4,10 +4,81 @@ O contrato e propriedade do backend (`backend-centralizador-financeiro`), servid
 `GET /api/v1/openapi.json` e `GET /api/v1/docs`, e versionado em `openapi/openapi.json`
 naquele repositorio.
 
-`openapi.snapshot.json` (nesta pasta) e uma copia de referencia do contrato
-em `backend @ 2c416cd`. Os tipos em `src/lib/accounts/types.ts` e os schemas em
-`src/lib/accounts/schema.ts` sao transcritos a mao e devem acompanhar esse snapshot.
+O [snapshot local](openapi.snapshot.json) registra as operações incorporadas a
+este cliente. As revisões de origem e a comparação com o backend estão abaixo.
 Este cliente nao compartilha fonte nem pacote com o cliente web.
+
+## Contrato vigente conferido em 24/11/2026
+
+Referência da comparação estática `backend b9f6a7a`. Os tipos e schemas do
+cliente são mantidos localmente à mão. Os testes em
+[contract.test.ts](contract.test.ts) usam o snapshot local. A correspondência
+com o backend depende da revisão e da operação comparadas.
+
+### Pluggy
+
+O [snapshot mobile](openapi.snapshot.json) partiu do OpenAPI de `605cb07`.
+A correção B01 atualiza a conclusão e o detalhe da conexão a partir do backend
+`b9f6a7a`, incluindo os componentes `PluggyDataAvailability` e
+`PluggyImportAccount`. As 28 operações presentes no snapshot coincidem com as
+correspondentes do OpenAPI dessa revisão. O backend publica 40 operações.
+
+| Operação em `/api/v1` | Resposta publicada no backend vigente | Consumo mobile |
+|---|---|---|
+| `POST /connections/pluggy/sessions` | `201` com conexão, Connect Token e vencimento | Compatível no recorte verificado. |
+| `POST /connections/pluggy/completions` | `202` com `connection` e `initialImport`. `Idempotency-Key` obrigatória. | O mobile envia `itemId` com a chave da sessão e valida o envelope de aceitação. **Tentar de novo** repete o mesmo par. |
+| `GET /connections/{connectionId}` | `200` com detalhe e `initialImport` anulável | O mobile valida o campo e mostra o estado da importação separado do consentimento. **Verificar de novo** atualiza a consulta durante o andamento. |
+| `POST /connections/{connectionId}/disconnect` | `200` com conexão | Compatível no recorte verificado. |
+| `PUT /connections/{connectionId}/accounts/{providerAccountId}/mapping` | `200` com `accountId` e `initialImport` atualizado. Corpo `link` com `accountId` ou `create`. | Bloqueado no mobile. Snapshot, API e tela ainda não oferecem mapeamento. |
+
+**B01.** A tela acompanha `queued`, `processing`, `awaiting_account_mapping`,
+`completed`, `completed_with_errors` e `failed`. O schema preserva a
+disponibilidade separada de contas e transações. A confirmação da jornada em
+dispositivo com Sandbox está pendente. Vincular ou criar contas durante
+`awaiting_account_mapping` pertence à etapa de mapeamento P02-01.
+
+Para uma movimentação manual, `MovementFormScreen` já cria um UUID com
+`expo-crypto` e o envia no `POST /transactions`. As movimentações coletadas pelo
+Pluggy são gravadas e deduplicadas no backend por identidade da movimentação
+na conexão e conta externas.
+
+### OFX
+
+O upload da prévia recebe `file` e `destinationAccountId` e retorna `201`. A
+confirmação recebe o mesmo destino em JSON, processa de forma síncrona e retorna
+`200`. As duas escritas exigem `Idempotency-Key`. A consulta por `importRunId`
+retorna `200` sem chave. Os três caminhos têm a mesma definição no snapshot e
+no OpenAPI vigente. O schema do cliente representa `preview_ready`, `queued`,
+`processing`, `completed`, `completed_with_errors`, `failed` e `expired`.
+
+A S3-08 prevê seleção da conta após a leitura do arquivo, antes da prévia final,
+e vencimento em 24 horas. A API atual exige conta manual ativa do tenant já no
+upload. O seletor do cliente lista contas ativas, incluindo as conectadas, que
+o backend recusa como destino OFX com `409`. O estado `awaiting_account_mapping`
+e o campo `expiresAt` da prévia estão ausentes do contrato OFX. O enum `expired`
+representa um estado previsto, sem validação de idade localizada na confirmação.
+O `retentionExpiresAt` registra o prazo de metadados/resultados, calculado em 90
+dias após um estado terminal. O código tenta excluir a origem do R2 no caminho
+de confirmação terminal. A limpeza de prévias abandonadas e o expurgo dos
+resultados seguem sem evidência nesta revisão.
+
+Os erros publicados seguem Problem Details. Na prévia, `413` indica arquivo
+acima do limite da API, `415` mídia não suportada e `422` OFX inválido.
+`409` também abrange conflitos de conta, execução e idempotência. A API limita
+o arquivo a 10 MiB. O mobile aplica o mesmo limite de 10 MiB.
+
+### HU-008 — sincronização recorrente
+
+O backend publica `POST /api/v1/connections/{connectionId}/sync-runs`
+(`202`), `GET` por `runId` (`200`), `GET .../sync-runs/latest` (`200`) e
+`POST .../update-session` (`200`). A solicitação `POST .../sync-runs` não pede
+`Idempotency-Key`. Durante uma execução ativa, a API reaproveita essa execução
+para a conexão. A publicação e o consumo desses caminhos estão registrados na
+auditoria atual do Dev 3, P02-04. As quatro rotas estão ausentes do snapshot.
+
+O checkout mobile ainda não tem chamadas nem schemas para as rotas HU-008.
+O consumo e a experiência de retomada são encaminhados ao Dev 2. A execução
+real e o aceite são pendentes.
 
 ## Cobertura atual
 
@@ -23,8 +94,8 @@ Este cliente nao compartilha fonte nem pacote com o cliente web.
 estao descritas na secao "Transactions (Sprint 2)".
 
 `contract.test.ts` verifica que as operacoes consumidas existem no snapshot, exigem
-bearer Auth0 e usam os mesmos campos dos schemas do cliente. Ao atualizar o snapshot, rode
-`pnpm test`: mudanca incompativel no contrato quebra esse teste.
+bearer Auth0 e usam os campos verificados nos schemas do cliente. Ao atualizar o snapshot, rode
+`pnpm test` e confira o diff contra o OpenAPI da revisão de origem.
 Regras em `especificacao-manutencao-isolamento-contas.html` (docs): PATCH parcial e estrito,
 saldo inicial e data de referencia somente juntos, conta conectada somente leitura,
 desativacao logica e idempotente, sem DELETE e sem reativacao.
@@ -165,6 +236,10 @@ Enquanto nao houver decisao, o acesso usa `src/lib/api/http-client.ts` + tipos a
 | `openapi-generator` (typescript-fetch) | cliente completo | JVM; mais pesado |
 
 ## Sprint 3
+
+> **Registro histórico.** A seção abaixo descreve os contratos usados na entrega
+> de outubro de 2026, com as limitações e hipóteses daquele momento. Para o
+> comportamento vigente e os bloqueios, consulte a comparação acima.
 
 Baseline da Fase 1 do Dev 2 (2026-10-07), atualizado com o contrato backend S3-01 do Dev 1
 (`docs/planejamento/sprint-03/contrato-backend-s3-01.html`) e, em 2026-10-09, com o OpenAPI do

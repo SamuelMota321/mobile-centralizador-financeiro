@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ProblemDetailsError } from "../lib/api/errors";
 import { CONNECTION_STATUSES } from "../lib/connections/types";
-import { connectionView, ITEM_ID } from "../lib/connections/fixtures";
-import { connectionSchema } from "../lib/connections/schema";
+import { awaitingMappingImportView, connectionView, initialImportView, ITEM_ID } from "../lib/connections/fixtures";
+import { connectionSchema, initialImportSchema } from "../lib/connections/schema";
 import {
+  canCreateFromProvider,
+  mappingStatusText,
+  needsAccountMapping,
+  providerAccountTypeLabel,
   canCheckAgain,
   canDisconnect,
   canRefreshInitialImport,
@@ -68,6 +72,31 @@ describe("ações disponíveis por estado", () => {
   });
 });
 
+describe("estados da importação inicial", () => {
+  it.each(["queued", "processing", "awaiting_account_mapping"] as const)(
+    "permite verificar de novo quando está em %s",
+    (status) => {
+      expect(canRefreshInitialImport(status)).toBe(true);
+      expect(initialImportStatus(status).text).toBeTruthy();
+    },
+  );
+
+  it.each(["completed", "completed_with_errors", "failed", undefined] as const)(
+    "encerra a atualização da importação em %s",
+    (status) => expect(canRefreshInitialImport(status)).toBe(false),
+  );
+
+  it("explica a espera pelo mapeamento e os resultados ao usuário", () => {
+    expect(initialImportStatus("awaiting_account_mapping")).toMatchObject({
+      tone: "warning",
+      text: expect.stringContaining("mapeamento"),
+    });
+    expect(initialImportStatus("completed").tone).toBe("success");
+    expect(initialImportStatus("completed_with_errors").tone).toBe("warning");
+    expect(initialImportStatus("failed").tone).toBe("error");
+  });
+});
+
 describe("consentSummary", () => {
   it("traduz os produtos conhecidos e mantém o código dos desconhecidos", () => {
     expect(productLabel("TRANSACTIONS")).toBe("Movimentações");
@@ -129,5 +158,30 @@ describe("classifyConnectionError", () => {
       kind: "message",
       message: "Falhou. Tente de novo.",
     });
+  });
+});
+
+describe("mapeamento de contas", () => {
+  const awaiting = initialImportSchema.parse(awaitingMappingImportView());
+  const [pending, mapped, unsupported] = awaiting.accountMapping.accounts;
+
+  it("só pede a escolha enquanto a importação aguarda o mapeamento", () => {
+    expect(needsAccountMapping(awaiting)).toBe(true);
+    expect(needsAccountMapping(initialImportSchema.parse(initialImportView("processing")))).toBe(false);
+    expect(needsAccountMapping(null)).toBe(false);
+  });
+
+  it("permite criar só contas com tipo reconhecido em reais", () => {
+    expect(canCreateFromProvider(pending)).toBe(true);
+    expect(canCreateFromProvider(unsupported)).toBe(false);
+    expect(canCreateFromProvider({ ...pending, currencyCode: "USD" })).toBe(false);
+  });
+
+  it("descreve tipo e estado em texto", () => {
+    expect(providerAccountTypeLabel("checking")).toBe("Conta corrente");
+    expect(providerAccountTypeLabel(null)).toBe("Tipo não suportado");
+    expect(mappingStatusText(pending)).toMatch(/escolha/);
+    expect(mappingStatusText(mapped)).toBe("Vinculada");
+    expect(mappingStatusText(unsupported)).toMatch(/não será importada/);
   });
 });

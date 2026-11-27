@@ -9,6 +9,13 @@ Critério mínimo antes de considerar uma tela pronta. Curto de propósito; deta
 - [ ] Uma ação primária fixa no rodapé
 - [ ] Loading, vazio, erro e sucesso implementados (não só o caminho feliz)
 - [ ] Ação destrutiva confirmada com `Alert.alert`
+- [ ] Dado de fonte externa mostra origem, data de referência e frescor
+
+## Movimento
+
+- [ ] Todo movimento tem propósito e segue a tabela de Motion do `DESIGN.md`
+- [ ] Testado com "Reduzir movimento" ativo no aparelho: sai o deslocamento, fica a opacidade
+- [ ] Nenhum valor financeiro animado
 
 ## Visual
 

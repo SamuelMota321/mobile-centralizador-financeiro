@@ -1,10 +1,18 @@
 import { z } from "zod";
 import { apiRequest } from "../api/http-client";
 import { toProblemError } from "../api/problem-error";
-import { completeConnectionInputSchema, completionAcceptedSchema, connectionDetailSchema, connectionSchema, pluggySessionSchema } from "./schema";
+import {
+  type AccountMappingChoice,
+  type AccountMappingResult,
+  accountMappingInputSchema,
+  accountMappingResultSchema,
+  completeConnectionInputSchema,
+  completionAcceptedSchema,
+  connectionDetailSchema,
+  connectionSchema,
+  pluggySessionSchema,
+} from "./schema";
 import type { CompletionAccepted, Connection, PluggySession } from "./types";
-
-// O backend vincula cada chave de conclusão ao itemId; o reenvio reutiliza ambos.
 
 const uuidSchema = z.uuid();
 
@@ -18,12 +26,16 @@ export async function startPluggySession(): Promise<PluggySession> {
   }
 }
 
-/** POST /api/v1/connections/pluggy/completions — o backend confere o item e o liga ao tenant. */
+/** POST /api/v1/connections/pluggy/completions — aceita a importação inicial com 202. */
 export async function completePluggyConnection(itemId: string, idempotencyKey: string): Promise<CompletionAccepted> {
   const body = completeConnectionInputSchema.parse({ itemId });
   const key = uuidSchema.parse(idempotencyKey);
   try {
-    const raw = await apiRequest<unknown>("/connections/pluggy/completions", { method: "POST", body, idempotencyKey: key });
+    const raw = await apiRequest<unknown>("/connections/pluggy/completions", {
+      method: "POST",
+      body,
+      idempotencyKey: key,
+    });
     return completionAcceptedSchema.parse(raw);
   } catch (error) {
     throw toProblemError(error);
@@ -47,6 +59,26 @@ export async function disconnectConnection(connectionId: string): Promise<Connec
   try {
     const raw = await apiRequest<unknown>(`/connections/${id}/disconnect`, { method: "POST" });
     return connectionSchema.parse(raw);
+  } catch (error) {
+    throw toProblemError(error);
+  }
+}
+
+/**
+ * PUT /api/v1/connections/{connectionId}/accounts/{providerAccountId}/mapping — liga uma conta
+ * do banco a uma conta manual existente ou cria uma conta conectada. Repetir a mesma escolha é seguro.
+ */
+export async function mapPluggyAccount(
+  connectionId: string,
+  providerAccountId: string,
+  choice: AccountMappingChoice,
+): Promise<AccountMappingResult> {
+  const id = uuidSchema.parse(connectionId);
+  const providerId = uuidSchema.parse(providerAccountId);
+  const body = accountMappingInputSchema.parse(choice);
+  try {
+    const raw = await apiRequest<unknown>(`/connections/${id}/accounts/${providerId}/mapping`, { method: "PUT", body });
+    return accountMappingResultSchema.parse(raw);
   } catch (error) {
     throw toProblemError(error);
   }

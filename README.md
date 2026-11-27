@@ -104,8 +104,10 @@ O `.env` é ignorado pelo git. Nunca coloque credenciais reais.
 No painel do Auth0, registre uma aplicação do tipo **Native** (PKCE, sem client secret) e
 adicione tanto em *Allowed Callback URLs* quanto em *Allowed Logout URLs*:
 
-- `coinciente://*`
-- no Expo Go, também a URL `exp://...` que o `pnpm start` imprime no terminal
+- `coinciente://auth` para a versão Android instalada para testes
+
+Para testar o login no aparelho, instale a versão Android do app com
+`pnpm exec expo run:android --device`.
 
 Preencha no `.env`:
 
@@ -175,6 +177,43 @@ Parar o Metro: `Ctrl+C`.
    Formulários abrem em tela cheia e o Voltar do Android os fecha. Datas em DD/MM/AAAA.
 4. **Sair** limpa a sessão e volta à tela de entrada; nenhum dado da sessão anterior aparece.
 
+## Prévia da Visão geral
+
+A aba **Visão geral** reúne Disponível, Entradas e Saídas, gráficos dos últimos
+30 dias, gastos por categoria, fluxo mensal, movimentações recentes, alertas e
+saldos por conta. A prévia usa os mesmos dados fictícios da versão web. Os
+períodos disponíveis pertencem à demonstração, e os saldos reais dependem da
+integração com as agregações do backend.
+
+A prévia fica desativada por padrão. Para habilitá-la, adicione a linha abaixo
+ao **.env do mobile**. A variável `OVERVIEW_PREVIEW` do deploy web controla
+apenas a versão web.
+
+```dotenv
+EXPO_PUBLIC_OVERVIEW_PREVIEW=true
+```
+
+### Testar no Android físico pelo Windows
+
+Use um checkout local fora do OneDrive, com caminho sem acentos. Ative a
+**Depuração USB** no aparelho, conecte-o por cabo e aceite a autorização.
+Na raiz do checkout, com as dependências já instaladas, rode no PowerShell:
+
+```powershell
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+& "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+pnpm exec expo run:android --device
+```
+
+Se o SDK estiver em outro local, ajuste `ANDROID_HOME`. O aparelho deve aparecer
+como `device` na lista do ADB. Se o Gradle informar *SDK location not found*,
+confira o caminho antes de executar o build novamente.
+
+Selecione o aparelho na lista do Expo. Com o Metro aberto, entre no app e abra
+**Visão geral** na barra inferior. Confira o aviso de dados de exemplo, troque
+de mês, abra um gráfico de 30 dias, filtre as saídas por categoria e navegue
+pelas páginas do fluxo mensal.
+
 ## Checagens de qualidade
 
 ```bash
@@ -232,7 +271,7 @@ componentes ainda não decidida); são verificados pelo roteiro de demonstraçã
 | `PRODUCT.md`, `DESIGN.md` | produto e sistema visual derivados do Style Guide |
 | `App.tsx` | raiz: carrega as fontes, provê áreas seguras e alterna entre entrada e seções do app |
 | `src/auth/` | configuração Auth0, sessão no SecureStore, contexto de autenticação e numeração de sessões |
-| `src/screens/` | telas de Movimentações, Contas, Categorias e Regras, formulários e a lógica testável de cada uma |
+| `src/screens/` | telas de Visão geral, Movimentações, Contas, Categorias e Regras, formulários e a lógica testável de cada uma |
 | `src/ui/` | símbolo, ícones, botões, avisos, etiquetas, campos e as molduras `AppScreen`/`FormScreen` |
 | `src/theme.ts` | tokens claro e escuro, pesos da fonte e escala tipográfica |
 | `src/lib/api/config.ts` | base URL da API a partir do ambiente |

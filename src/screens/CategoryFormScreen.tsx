@@ -80,7 +80,7 @@ export function CategoryFormScreen({ category, onCancel, onDone }: Props) {
       description={
         renaming
           ? "As movimentações já categorizadas passam a mostrar o novo nome."
-          : "Categorias são pessoais: nenhuma vem pronta. Use nomes que façam sentido para você."
+          : "Use nomes que façam sentido para você. As sugeridas são só um ponto de partida."
       }
       onCancel={onCancel}
       cancelDisabled={submitting}

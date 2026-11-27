@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { isUnauthorized } from "../lib/accounts/messages";
 import { connectionErrorMessage } from "../lib/connections/messages";
-import type { Connection, ConnectionStatus } from "../lib/connections/types";
 import type { InitialImport } from "../lib/connections/schema";
+import type { Connection, ConnectionStatus } from "../lib/connections/types";
 import type { ChipTone, NoticeTone } from "../ui/controls";
+import { ACCOUNT_TYPE_LABELS } from "./account-type-labels";
 
 export interface StatusView {
   label: string;
@@ -154,4 +155,33 @@ export type ConnectionFailure = { kind: "unauthorized" } | { kind: "message"; me
 export function classifyConnectionError(error: unknown, fallback: string): ConnectionFailure {
   if (isUnauthorized(error)) return { kind: "unauthorized" };
   return { kind: "message", message: connectionErrorMessage(error, `${fallback} Tente de novo.`) };
+}
+
+// ---------- Mapeamento de contas da importação inicial ----------
+
+export type ProviderAccount = InitialImport["accountMapping"]["accounts"][number];
+
+/** A etapa de vínculo só existe enquanto a importação espera essa escolha. */
+export function needsAccountMapping(initialImport: InitialImport | null | undefined): initialImport is InitialImport {
+  return initialImport?.status === "awaiting_account_mapping";
+}
+
+export function providerAccountTypeLabel(accountType: ProviderAccount["accountType"]): string {
+  return accountType ? ACCOUNT_TYPE_LABELS[accountType] : "Tipo não suportado";
+}
+
+/** Sem tipo reconhecido o backend não cria a conta; sobra vincular a uma existente. */
+export function canCreateFromProvider(account: ProviderAccount): boolean {
+  return account.accountType !== null && account.currencyCode === "BRL";
+}
+
+export function mappingStatusText(account: ProviderAccount): string {
+  switch (account.mappingStatus) {
+    case "pending":
+      return "Aguardando sua escolha";
+    case "mapped":
+      return "Vinculada";
+    case "unsupported":
+      return "Não suportada: esta conta não será importada";
+  }
 }

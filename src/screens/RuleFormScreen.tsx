@@ -35,13 +35,15 @@ interface Props {
   onDone: (message: string) => void;
   /** Regra, categoria ou conta indisponível: volta para a lista, que recarrega. */
   onStale: (message: string) => void;
+  /** Nova regra com o valor da condição já preenchido ("descrição contém …"), vindo do simulador. */
+  initialValue?: string;
 }
 
-export function RuleFormScreen({ rule, categories, accounts, onCancel, onDone, onStale }: Props) {
+export function RuleFormScreen({ rule, categories, accounts, onCancel, onDone, onStale, initialValue }: Props) {
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const editing = rule !== undefined;
-  const [values, setValues] = useState<RuleFormValues>(rule ? valuesFromRule(rule) : EMPTY_RULE_VALUES);
+  const [values, setValues] = useState<RuleFormValues>(rule ? valuesFromRule(rule) : { ...EMPTY_RULE_VALUES, conditionValue: initialValue ?? "" });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

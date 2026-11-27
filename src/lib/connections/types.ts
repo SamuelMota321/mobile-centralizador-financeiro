@@ -1,6 +1,6 @@
-// Alinhado ao contrato de conexões e importação inicial do backend.
-
 import type { InitialImport } from "./schema";
+
+// Tipos das operações de conexão consumidas pelo app.
 
 export const CONNECTION_STATUSES = [
   "pending_authorization",
@@ -34,7 +34,6 @@ export interface Connection {
   consent: Consent;
   createdAt: string;
   updatedAt: string;
-  /** Presente na consulta por conexão; ausente na sessão e desconexão. */
   initialImport?: InitialImport | null;
 }
 

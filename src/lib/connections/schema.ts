@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CONNECTION_STATUSES, CONSENT_STATUSES } from "./types";
 
-// Validação de borda espelhando o OpenAPI atual do backend.
+// Validação de borda espelhando as operações consumidas do OpenAPI.
 
 const timestampSchema = z.iso.datetime({ offset: true });
 
@@ -65,3 +65,18 @@ export const initialImportSchema = z.object({
 export type InitialImport = z.infer<typeof initialImportSchema>;
 export const completionAcceptedSchema = z.object({ connection: connectionSchema, initialImport: initialImportSchema });
 export const connectionDetailSchema = connectionSchema.extend({ initialImport: initialImportSchema.nullable() });
+
+/** Corpo de PUT /connections/{id}/accounts/{providerAccountId}/mapping: vincular a uma conta ou criar uma nova. */
+export const accountMappingInputSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("link"), accountId: z.uuid() }).strict(),
+  z.object({ action: z.literal("create") }).strict(),
+]);
+export type AccountMappingChoice = z.infer<typeof accountMappingInputSchema>;
+
+export const accountMappingResultSchema = z.object({
+  connectionId: z.uuid(),
+  providerAccountId: z.uuid(),
+  accountId: z.uuid(),
+  initialImport: initialImportSchema,
+});
+export type AccountMappingResult = z.infer<typeof accountMappingResultSchema>;

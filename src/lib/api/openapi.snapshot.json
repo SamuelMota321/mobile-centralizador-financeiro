@@ -9603,6 +9603,3631 @@
         "summary": "Accept a Pluggy item lifecycle notification",
         "tags": ["pluggy-webhooks"]
       }
+    },
+    "/api/v1/patrimony/{collection}": {
+      "post": {
+        "operationId": "PatrimonyController_create",
+        "parameters": [
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "assets",
+                "financings",
+                "liabilities"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "type",
+                      "description",
+                      "estimatedValue",
+                      "valuationDate",
+                      "source"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "estimatedValue": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      },
+                      "valuationDate": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "source": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "description",
+                      "outstandingBalance"
+                    ],
+                    "properties": {
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "outstandingBalance": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      },
+                      "assetId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "description",
+                      "outstandingBalance"
+                    ],
+                    "properties": {
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "outstandingBalance": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "type",
+                        "description",
+                        "estimatedValue",
+                        "valuationDate",
+                        "source"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "asset"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "estimatedValue": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "valuationDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 120
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance",
+                        "assetId"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "financing"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "liability"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "Create a manual asset, financing, or liability",
+        "tags": [
+          "patrimony"
+        ]
+      },
+      "get": {
+        "operationId": "PatrimonyController_list",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "assets",
+                "financings",
+                "liabilities"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items",
+                    "page",
+                    "pageSize",
+                    "total"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "kind",
+                              "currencyCode",
+                              "version",
+                              "createdAt",
+                              "updatedAt",
+                              "type",
+                              "description",
+                              "estimatedValue",
+                              "valuationDate",
+                              "source"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "asset"
+                                ]
+                              },
+                              "currencyCode": {
+                                "type": "string",
+                                "enum": [
+                                  "BRL"
+                                ]
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "type": {
+                                "type": "string",
+                                "maxLength": 80
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "estimatedValue": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              },
+                              "valuationDate": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "source": {
+                                "type": "string",
+                                "maxLength": 120
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "kind",
+                              "currencyCode",
+                              "version",
+                              "createdAt",
+                              "updatedAt",
+                              "description",
+                              "outstandingBalance",
+                              "assetId"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "financing"
+                                ]
+                              },
+                              "currencyCode": {
+                                "type": "string",
+                                "enum": [
+                                  "BRL"
+                                ]
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "outstandingBalance": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              },
+                              "assetId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "kind",
+                              "currencyCode",
+                              "version",
+                              "createdAt",
+                              "updatedAt",
+                              "description",
+                              "outstandingBalance"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "liability"
+                                ]
+                              },
+                              "currencyCode": {
+                                "type": "string",
+                                "enum": [
+                                  "BRL"
+                                ]
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "outstandingBalance": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "List manual patrimony records for the authenticated tenant",
+        "tags": [
+          "patrimony"
+        ]
+      }
+    },
+    "/api/v1/patrimony/{collection}/{id}": {
+      "get": {
+        "operationId": "PatrimonyController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "assets",
+                "financings",
+                "liabilities"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "type",
+                        "description",
+                        "estimatedValue",
+                        "valuationDate",
+                        "source"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "asset"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "estimatedValue": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "valuationDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 120
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance",
+                        "assetId"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "financing"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "liability"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "Get a manual patrimony record",
+        "tags": [
+          "patrimony"
+        ]
+      },
+      "patch": {
+        "operationId": "PatrimonyController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "assets",
+                "financings",
+                "liabilities"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "estimatedValue": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      },
+                      "valuationDate": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "source": {
+                        "type": "string",
+                        "maxLength": 120
+                      }
+                    },
+                    "minProperties": 1
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [],
+                    "properties": {
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "outstandingBalance": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      },
+                      "assetId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                      }
+                    },
+                    "minProperties": 1
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [],
+                    "properties": {
+                      "description": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "outstandingBalance": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$"
+                      }
+                    },
+                    "minProperties": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "type",
+                        "description",
+                        "estimatedValue",
+                        "valuationDate",
+                        "source"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "asset"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "estimatedValue": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "valuationDate": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 120
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance",
+                        "assetId"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "financing"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "kind",
+                        "currencyCode",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "description",
+                        "outstandingBalance"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "liability"
+                          ]
+                        },
+                        "currencyCode": {
+                          "type": "string",
+                          "enum": [
+                            "BRL"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "outstandingBalance": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "Update a manual patrimony record",
+        "tags": [
+          "patrimony"
+        ]
+      }
+    },
+    "/api/v1/patrimony/{collection}/{id}/history": {
+      "get": {
+        "operationId": "PatrimonyController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "assets",
+                "financings",
+                "liabilities"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "version",
+                      "actorUserId",
+                      "requestId",
+                      "createdAt",
+                      "state"
+                    ],
+                    "properties": {
+                      "version": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "actorUserId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "requestId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "state": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "type",
+                              "description",
+                              "estimatedValue",
+                              "valuationDate",
+                              "source"
+                            ],
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "maxLength": 80
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "estimatedValue": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              },
+                              "valuationDate": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "source": {
+                                "type": "string",
+                                "maxLength": 120
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "description",
+                              "outstandingBalance",
+                              "assetId"
+                            ],
+                            "properties": {
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "outstandingBalance": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              },
+                              "assetId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "description",
+                              "outstandingBalance"
+                            ],
+                            "properties": {
+                              "description": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "outstandingBalance": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9]\\d*)\\.\\d{2}$"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "List prior and current versions of a manual patrimony record",
+        "tags": [
+          "patrimony"
+        ]
+      }
+    },
+    "/api/v1/investments": {
+      "get": {
+        "operationId": "InvestmentController_list",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "portfolio",
+                    "positions",
+                    "page",
+                    "pageSize",
+                    "total"
+                  ],
+                  "properties": {
+                    "portfolio": {
+                      "type": "object",
+                      "required": [
+                        "availability",
+                        "total",
+                        "totalsByCurrency",
+                        "referenceDate",
+                        "connections",
+                        "allocation"
+                      ],
+                      "properties": {
+                        "availability": {
+                          "type": "string",
+                          "enum": [
+                            "complete",
+                            "partial",
+                            "unavailable"
+                          ]
+                        },
+                        "total": {
+                          "type": "object",
+                          "nullable": true,
+                          "required": [
+                            "currencyCode",
+                            "amount"
+                          ],
+                          "properties": {
+                            "currencyCode": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "totalsByCurrency": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "currencyCode",
+                              "amount"
+                            ],
+                            "properties": {
+                              "currencyCode": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "referenceDate": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "connections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "connectionId",
+                              "availability"
+                            ],
+                            "properties": {
+                              "connectionId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "availability": {
+                                "type": "string",
+                                "enum": [
+                                  "complete",
+                                  "partial",
+                                  "unavailable"
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "allocation": {
+                          "type": "object",
+                          "required": [
+                            "basis",
+                            "availability",
+                            "knownPositionCount",
+                            "includedPositionCount",
+                            "excludedKnownPositionCount",
+                            "excludedByReason",
+                            "currencies"
+                          ],
+                          "properties": {
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "active_current_complete_positive_balance"
+                              ],
+                              "description": "Only ACTIVE positions with positive net balance, known currency, complete collection and current reference are included"
+                            },
+                            "availability": {
+                              "type": "string",
+                              "enum": [
+                                "complete",
+                                "partial",
+                                "unavailable"
+                              ],
+                              "description": "Partial when known positions are excluded or any connection is incomplete; unavailable without a positive denominator"
+                            },
+                            "knownPositionCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "includedPositionCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "excludedKnownPositionCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "excludedByReason": {
+                              "type": "object",
+                              "description": "Exclusive counts by first applicable reason: quality, status, balance, currency. Unknown positions at unavailable connections are not counted.",
+                              "required": [
+                                "incomplete_or_stale",
+                                "non_active",
+                                "non_positive_balance",
+                                "unknown_currency"
+                              ],
+                              "properties": {
+                                "incomplete_or_stale": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "non_active": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "non_positive_balance": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "unknown_currency": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              }
+                            },
+                            "currencies": {
+                              "type": "array",
+                              "description": "Independent denominators per currency; no conversion or cross-currency total",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "currencyCode",
+                                  "denominatorAmount",
+                                  "byClass",
+                                  "byInstitution"
+                                ],
+                                "properties": {
+                                  "currencyCode": {
+                                    "type": "string"
+                                  },
+                                  "denominatorAmount": {
+                                    "type": "string"
+                                  },
+                                  "byClass": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "assetClass",
+                                        "amount",
+                                        "percentage",
+                                        "positions"
+                                      ],
+                                      "properties": {
+                                        "assetClass": {
+                                          "type": "string",
+                                          "enum": [
+                                            "FIXED_INCOME",
+                                            "EQUITY",
+                                            "ETF",
+                                            "MUTUAL_FUND",
+                                            "COE",
+                                            "SECURITY",
+                                            "UNCLASSIFIED"
+                                          ],
+                                          "description": "OTHER and unsupported provider types are UNCLASSIFIED; subtype is never used to infer a class"
+                                        },
+                                        "amount": {
+                                          "type": "string",
+                                          "description": "Exact summed balance in this currency"
+                                        },
+                                        "percentage": {
+                                          "type": "string",
+                                          "pattern": "^\\d+\\.\\d$",
+                                          "description": "Percentage rounded half-up to one decimal; rows are not adjusted to sum to 100.0"
+                                        },
+                                        "positions": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "required": [
+                                              "id",
+                                              "source",
+                                              "referenceDate"
+                                            ],
+                                            "properties": {
+                                              "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                              },
+                                              "source": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "pluggy"
+                                                ]
+                                              },
+                                              "referenceDate": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "byInstitution": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "institutionName",
+                                        "amount",
+                                        "percentage",
+                                        "positions"
+                                      ],
+                                      "properties": {
+                                        "institutionName": {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "description": "Null means institution not supplied; known names are grouped exactly as received"
+                                        },
+                                        "amount": {
+                                          "type": "string",
+                                          "description": "Exact summed balance in this currency"
+                                        },
+                                        "percentage": {
+                                          "type": "string",
+                                          "pattern": "^\\d+\\.\\d$",
+                                          "description": "Percentage rounded half-up to one decimal; rows are not adjusted to sum to 100.0"
+                                        },
+                                        "positions": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "required": [
+                                              "id",
+                                              "source",
+                                              "referenceDate"
+                                            ],
+                                            "properties": {
+                                              "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                              },
+                                              "source": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "pluggy"
+                                                ]
+                                              },
+                                              "referenceDate": {
+                                                "type": "string",
+                                                "format": "date-time",
+                                                "nullable": true
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "connectionId",
+                          "source",
+                          "externalId",
+                          "name",
+                          "assetType",
+                          "subtype",
+                          "providerStatus",
+                          "currencyCode",
+                          "balance",
+                          "quantity",
+                          "investedAmount",
+                          "resultAmount",
+                          "institutionName",
+                          "referenceDate",
+                          "rate",
+                          "rateType",
+                          "fixedAnnualRate",
+                          "maturityDate",
+                          "dataQuality",
+                          "missingFields"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "connectionId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "pluggy"
+                            ]
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "assetType": {
+                            "type": "string"
+                          },
+                          "subtype": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "providerStatus": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "currencyCode": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "balance": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "investedAmount": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "resultAmount": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "referenceDate": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "rate": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "rateType": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "fixedAnnualRate": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "maturityDate": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                          },
+                          "dataQuality": {
+                            "type": "object",
+                            "required": [
+                              "availability",
+                              "freshness"
+                            ],
+                            "properties": {
+                              "availability": {
+                                "type": "string",
+                                "enum": [
+                                  "complete",
+                                  "partial",
+                                  "unavailable"
+                                ]
+                              },
+                              "freshness": {
+                                "type": "string",
+                                "enum": [
+                                  "current",
+                                  "stale",
+                                  "unknown"
+                                ]
+                              }
+                            }
+                          },
+                          "missingFields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "List the authenticated user investment portfolio",
+        "tags": [
+          "investments"
+        ]
+      }
+    },
+    "/api/v1/investments/{id}/movements": {
+      "get": {
+        "operationId": "InvestmentController_movements",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "positionId",
+                    "availability",
+                    "movements",
+                    "page",
+                    "pageSize",
+                    "total"
+                  ],
+                  "properties": {
+                    "positionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "availability": {
+                      "type": "string",
+                      "enum": [
+                        "complete",
+                        "unavailable"
+                      ]
+                    },
+                    "movements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "source",
+                          "externalId",
+                          "type",
+                          "amount",
+                          "currencyCode",
+                          "occurredAt",
+                          "missingFields"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "pluggy"
+                            ]
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                          },
+                          "currencyCode": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "missingFields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "List available movements for one investment position",
+        "tags": [
+          "investments"
+        ]
+      }
+    },
+    "/api/v1/connections/{connectionId}/sync-runs": {
+      "post": {
+        "operationId": "PluggySyncController_requestManual",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "runId",
+                    "connectionId",
+                    "status",
+                    "trigger",
+                    "acceptedAt",
+                    "startedAt",
+                    "completedAt",
+                    "referenceDate",
+                    "reasons",
+                    "statusUrl"
+                  ],
+                  "properties": {
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "connectionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "action_required",
+                        "succeeded",
+                        "partial",
+                        "failed"
+                      ]
+                    },
+                    "trigger": {
+                      "type": "string",
+                      "enum": [
+                        "manual",
+                        "daily"
+                      ]
+                    },
+                    "acceptedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "referenceDate": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "dataType",
+                          "code"
+                        ],
+                        "properties": {
+                          "dataType": {
+                            "type": "string",
+                            "enum": [
+                              "accounts",
+                              "transactions",
+                              "investments",
+                              "investment_transactions",
+                              "connection"
+                            ]
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "unavailable",
+                              "failed",
+                              "ambiguous_identity"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "statusUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "detail"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "code",
+                          "message"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "origin",
+                          "institutionName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "payment",
+                              "cash",
+                              "credit_card",
+                              "investment",
+                              "other"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "connected"
+                            ]
+                          },
+                          "institutionName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Canonical request correlation identifier.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "auth0": []
+          }
+        ],
+        "summary": "Accept a manual Pluggy synchronization",
+        "tags": [
+          "connections"
+        ]
+      }
     }
   },
   "info": {
@@ -9618,6 +13243,51 @@
       "auth0": { "scheme": "bearer", "bearerFormat": "JWT", "type": "http" }
     },
     "schemas": {
+      "PluggyDataAvailability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "errorCode"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "available", "unavailable", "failed"]
+          },
+          "errorCode": { "type": "string", "nullable": true }
+        }
+      },
+      "PluggyImportAccount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerAccountId",
+          "name",
+          "accountType",
+          "currencyCode",
+          "mappingStatus",
+          "errorCode",
+          "mappedAccountId"
+        ],
+        "properties": {
+          "providerAccountId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "accountType": {
+            "type": "string",
+            "enum": ["checking", "savings", "credit_card"],
+            "nullable": true
+          },
+          "currencyCode": { "type": "string", "minLength": 3, "maxLength": 3 },
+          "mappingStatus": {
+            "type": "string",
+            "enum": ["pending", "mapped", "unsupported"]
+          },
+          "errorCode": { "type": "string", "nullable": true },
+          "mappedAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
       "TransactionView": {
         "type": "object",
         "required": [
