@@ -117,12 +117,19 @@ function sourceKey(filters: MovementFilters, today: string): string {
   return hasContentFilters(filters) ? "window" : "paged";
 }
 
-export function MovementsScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function MovementsScreen({
+  onNavigate,
+  initialFilters,
+}: {
+  onNavigate: (section: Section) => void;
+  /** Filtros de partida (vindos de Categorias); sem eles vale o padrão. */
+  initialFilters?: Partial<MovementFilters>;
+}) {
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
   const { colors } = useTheme();
-  const [filters, setFilters] = useState<MovementFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<MovementFilters>({ ...DEFAULT_FILTERS, ...initialFilters });
   const [source, setSource] = useState<Source | null>(null);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [state, setState] = useState<LoadState>("loading");

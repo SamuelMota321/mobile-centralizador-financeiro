@@ -6,7 +6,7 @@ import { Manrope_800ExtraBold } from "@expo-google-fonts/manrope/800ExtraBold";
 import { Newsreader_400Regular } from "@expo-google-fonts/newsreader/400Regular";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
@@ -16,6 +16,7 @@ import { MovementsScreen } from "./src/screens/MovementsScreen";
 import { OverviewScreen } from "./src/screens/OverviewScreen";
 import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
+import type { MovementFilters } from "./src/screens/movement-presentation";
 import { useTheme } from "./src/theme";
 import type { Section } from "./src/ui/screens";
 
@@ -53,6 +54,16 @@ function Splash() {
 function Root() {
   const { status } = useAuth();
   const [section, setSection] = useState<Section>("movimentacoes");
+  // Filtros com que Movimentações abre quando chega de Categorias ("Ver lançamentos", "Revisar").
+  const [movementsPreset, setMovementsPreset] = useState<Partial<MovementFilters> | null>(null);
+  const navigate = useCallback((next: Section) => {
+    setMovementsPreset(null);
+    setSection(next);
+  }, []);
+  const openMovements = useCallback((preset: Partial<MovementFilters>) => {
+    setMovementsPreset(preset);
+    setSection("movimentacoes");
+  }, []);
 
   if (status === "loading") return <Splash />;
   if (status !== "authenticated") return <SignInScreen />;
@@ -61,14 +72,14 @@ function Root() {
   // anterior permanece em estado.
   switch (section) {
     case "visao-geral":
-      return <OverviewScreen onNavigate={setSection} />;
+      return <OverviewScreen onNavigate={navigate} />;
     case "movimentacoes":
-      return <MovementsScreen onNavigate={setSection} />;
+      return <MovementsScreen key={movementsPreset ? "preset" : "default"} onNavigate={navigate} initialFilters={movementsPreset ?? undefined} />;
     case "contas":
-      return <AccountsScreen onNavigate={setSection} />;
+      return <AccountsScreen onNavigate={navigate} />;
     case "categorias":
-      return <CategoriesScreen onNavigate={setSection} />;
+      return <CategoriesScreen onNavigate={navigate} onOpenMovements={openMovements} />;
     case "regras":
-      return <RulesScreen onNavigate={setSection} />;
+      return <RulesScreen onNavigate={navigate} />;
   }
 }

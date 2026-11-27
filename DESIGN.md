@@ -167,6 +167,10 @@ Não se movem: valores, troca de aba além do nativo, linhas de lista ao rolar. 
 
 Botão (primário `signal`, secundário com contorno `line-strong`, perigo, texto) com altura 48 e estado carregando; campo de texto de 48 com borda `input-border`, rótulo acima e erro abaixo; grupo de escolha exposto como rádio; **marcador** (quadrado de 6px + texto, sem fundo) no lugar da etiqueta em pílula; **linha de metadados** (`Origem · ref. DD/MM · Conta`) abaixo do dado; aviso com ícone e borda à esquerda no tom do estado; estado vazio que ensina; esqueleto com a forma da lista.
 
+## Categorias e Regras (Style Guide 2.2)
+
+Doze cores de categoria (`theme.ts`: `categories`, `categoryOther`, `onCategory`), fixas pela ordem de criação das categorias da pessoa (arquivadas incluídas); da 13ª em diante, neutra. Só identificam a categoria, nunca estado, ganho ou perda, e o nome vem sempre escrito ao lado. O ícone sai do nome (`lib/categories/category-icon.ts`) e vai num círculo cheio (`CategoryBadge`, decorativo). A fileira de sugeridas (`CategoryTile`) mostra o estado no círculo (cheio, tracejado, apagado), num selo e no texto. Blocos de seção (`SectionCard`, `CollapsibleCard`) e faixa de destaque (`Banner`): **sem gradiente no mobile**, só borda no verde e ícone no verde; a exceção de gradiente do web não se aplica aqui. Listas com 10 itens por página (`Pager`: Anterior, "X de Y", Próxima), no lugar da rolagem infinita. Valores por categoria só quando o período inteiro foi lido; despesas sem categoria ou incertas ficam sempre visíveis em "A revisar". Sem minigráfico na linha (a coluna estreita não comporta).
+
 ## Do's and Don'ts
 
 Faça: mostrar data e origem como linha de metadados; linguagem simples; ação nomeada em cada botão; erro com problema e recuperação; verde só como sinal. Evite: cor como único indicador; spinners no meio do conteúdo; pílulas e fundos verdes; sombras em conteúdo; texto sem acento; promessas financeiras; qualquer vocabulário de banco (enviar, Pix, pagar).
