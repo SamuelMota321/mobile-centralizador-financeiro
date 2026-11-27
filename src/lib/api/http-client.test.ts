@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, REQUEST_TIMEOUT_MS, RequestTimeoutError, retryAfterMs, setTokenProvider } from "./http-client";
+import { apiRequest, MAX_CONCURRENT_REQUESTS, REQUEST_TIMEOUT_MS, RequestTimeoutError, retryAfterMs, setTokenProvider } from "./http-client";
 
 function stubFetch(status: number, body?: unknown) {
   const fetchMock = vi.fn(async () =>
@@ -45,7 +45,10 @@ describe("apiRequest", () => {
 });
 
 describe("nova tentativa em leituras", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 
   function sequence(...steps: (number | Error)[]) {
     setTokenProvider(() => undefined);
@@ -58,32 +61,68 @@ describe("nova tentativa em leituras", () => {
     return fetchMock;
   }
 
-  it("GET repete em 429 e 503 e depois funciona", async () => {
+  /** Sem aleatoriedade: o teste controla o relógio com precisão. */
+  const noJitter = () => vi.spyOn(Math, "random").mockReturnValue(0);
+
+  it("GET repete em 503 e depois em 429, e a espera cresce a cada tentativa (1 s, depois 5 s)", async () => {
     vi.useFakeTimers();
-    const fetchMock = sequence(429, 503, 200);
+    noJitter();
+    const fetchMock = sequence(503, 429, 200);
     const promise = apiRequest<{ ok: boolean }>("/accounts");
     await vi.advanceTimersByTimeAsync(1000);
-    await vi.advanceTimersByTimeAsync(2500);
+    await vi.advanceTimersByTimeAsync(5000);
     await expect(promise).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("GET repete em falha de rede", async () => {
     vi.useFakeTimers();
-    const fetchMock = sequence(new TypeError("Network request failed"), 200);
+    noJitter();
+    const fetchMock = sequence(new TypeError("fetch failed"), 200);
     const promise = apiRequest("/accounts");
     await vi.advanceTimersByTimeAsync(1000);
     await expect(promise).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("desiste depois de 3 repetições e devolve o erro", async () => {
+  it("429 insiste mais que 5xx: quatro esperas (2, 5, 10 e 20 s) antes de desistir", async () => {
     vi.useFakeTimers();
-    const fetchMock = sequence(429, 429, 429, 429);
+    noJitter();
+    const fetchMock = sequence(429, 429, 429, 429, 429);
     const assertion = expect(apiRequest("/accounts")).rejects.toMatchObject({ status: 429 });
+    await vi.advanceTimersByTimeAsync(2000 + 5000 + 10000 + 20000);
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("5xx desiste depois de 3 repetições", async () => {
+    vi.useFakeTimers();
+    noJitter();
+    const fetchMock = sequence(503, 503, 503, 503);
+    const assertion = expect(apiRequest("/accounts")).rejects.toMatchObject({ status: 503 });
     await vi.advanceTimersByTimeAsync(1000 + 2500 + 5000);
     await assertion;
     expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("o Retry-After do servidor manda quando é maior (até 30 s no 429)", async () => {
+    vi.useFakeTimers();
+    noJitter();
+    setTokenProvider(() => undefined);
+    const calls: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls.push(Date.now());
+        return calls.length === 1 ? new Response("", { status: 429, headers: { "retry-after": "15" } }) : new Response('{"ok":true}', { status: 200 });
+      }),
+    );
+    const promise = apiRequest("/accounts");
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toEqual({ ok: true });
+    expect(calls).toHaveLength(2);
   });
 
   it("não repete 401 nem escritas", async () => {
@@ -95,7 +134,7 @@ describe("nova tentativa em leituras", () => {
     await expect(apiRequest("/transactions", { method: "POST", body: { a: 1 } })).rejects.toMatchObject({ status: 503 });
     expect(write).toHaveBeenCalledTimes(1);
 
-    const failedWrite = sequence(new TypeError("Network request failed"));
+    const failedWrite = sequence(new TypeError("fetch failed"));
     await expect(apiRequest("/transactions", { method: "PATCH", body: {} })).rejects.toBeInstanceOf(TypeError);
     expect(failedWrite).toHaveBeenCalledTimes(1);
   });
@@ -103,8 +142,42 @@ describe("nova tentativa em leituras", () => {
   it("Retry-After em segundos vale com teto; datas são ignoradas", () => {
     expect(retryAfterMs("3")).toBe(3000);
     expect(retryAfterMs("999")).toBe(8000);
+    expect(retryAfterMs("999", 30_000)).toBe(30_000);
     expect(retryAfterMs("Wed, 21 Oct 2026 07:28:00 GMT")).toBeNull();
     expect(retryAfterMs(null)).toBeNull();
+  });
+});
+
+describe("teto de chamadas simultâneas", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("com 8 leituras ao mesmo tempo, nunca há mais que MAX_CONCURRENT_REQUESTS em andamento, e todas terminam", async () => {
+    setTokenProvider(() => undefined);
+    let running = 0;
+    let peak = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        running += 1;
+        peak = Math.max(peak, running);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        running -= 1;
+        return new Response('{"ok":true}', { status: 200 });
+      }),
+    );
+    const results = await Promise.all(Array.from({ length: 8 }, () => apiRequest<{ ok: boolean }>("/accounts")));
+    expect(results.every((result) => result.ok)).toBe(true);
+    expect(peak).toBe(MAX_CONCURRENT_REQUESTS);
+  });
+
+  it("uma falha não prende a vaga: as seguintes continuam", async () => {
+    setTokenProvider(() => undefined);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 401 })));
+    const settled = await Promise.allSettled(Array.from({ length: 6 }, () => apiRequest("/accounts")));
+    expect(settled.every((item) => item.status === "rejected")).toBe(true);
+    // Se alguma vaga tivesse vazado, esta chamada ficaria para sempre na fila.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"ok":true}', { status: 200 })));
+    await expect(apiRequest("/accounts")).resolves.toEqual({ ok: true });
   });
 });
 

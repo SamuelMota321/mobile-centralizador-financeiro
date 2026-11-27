@@ -46,18 +46,51 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
  * não duplicar movimentações; quem escreve decide (a Idempotency-Key cobre o caso).
  */
 export const RETRY_DELAYS_MS: readonly number[] = [1000, 2500, 5000];
+/**
+ * 429 é a borda do Render bloqueando rajadas, e o bloqueio dura mais que um 5xx: espera maior,
+ * com um pouco de aleatoriedade para as chamadas que falharam juntas não voltarem juntas.
+ */
+export const RATE_LIMIT_DELAYS_MS: readonly number[] = [2000, 5000, 10000, 20000];
 const RETRYABLE_STATUS: ReadonlySet<number> = new Set([429, 502, 503, 504]);
 /** Espera máxima aceita de um `Retry-After`: acima disso, melhor falhar e avisar. */
 const RETRY_AFTER_CAP_MS = 8000;
+const RATE_LIMIT_AFTER_CAP_MS = 30000;
 
 function isRead(method: string | undefined): boolean {
   return (method ?? "GET").toUpperCase() === "GET";
 }
 
 /** `Retry-After` em segundos; datas HTTP e valores absurdos são ignorados. */
-export function retryAfterMs(header: string | null): number | null {
+export function retryAfterMs(header: string | null, cap: number = RETRY_AFTER_CAP_MS): number | null {
   if (header === null || !/^\d{1,3}$/.test(header.trim())) return null;
-  return Math.min(Number(header.trim()) * 1000, RETRY_AFTER_CAP_MS);
+  return Math.min(Number(header.trim()) * 1000, cap);
+}
+
+/** Até 20% a mais: chamadas que falharam juntas não tentam de novo no mesmo instante. */
+function jitter(ms: number): number {
+  return Math.round(ms * (1 + Math.random() * 0.2));
+}
+
+/**
+ * Teto de chamadas simultâneas ao backend neste processo. Uma tela pode pedir várias listas de uma
+ * vez; sem teto, a rajada chega à borda do Render de uma só vez e leva 429. As que passam do teto
+ * esperam na fila (o tempo de espera não conta no tempo limite da leitura).
+ */
+export const MAX_CONCURRENT_REQUESTS = 3;
+let activeRequests = 0;
+const waitingRequests: (() => void)[] = [];
+
+async function withSlot<T>(task: () => Promise<T>): Promise<T> {
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS) await new Promise<void>((resolve) => waitingRequests.push(resolve));
+  else activeRequests += 1;
+  try {
+    return await task();
+  } finally {
+    // A vaga passa direto para o próximo da fila, sem abrir espaço para um furo.
+    const next = waitingRequests.shift();
+    if (next) next();
+    else activeRequests -= 1;
+  }
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -134,20 +167,24 @@ export async function apiRequest<T>(
   };
 
   const reading = isRead(rest.method);
-  const retries = reading ? RETRY_DELAYS_MS : [];
   const send = reading ? fetchRead : fetchWrite;
   let result: { response: Response; raw: string };
   for (let attempt = 0; ; attempt += 1) {
     try {
-      result = await send(url, init);
+      result = await withSlot(() => send(url, init));
     } catch (error) {
-      // Falha de rede: instância acordando ou conexão caiu. Tempo limite e esgotadas as tentativas propagam.
-      if (error instanceof RequestTimeoutError || attempt >= retries.length) throw error;
-      await sleep(retries[attempt]);
+      // Falha de rede: instância acordando ou conexão caiu. Escritas, tempo limite e tentativas esgotadas propagam.
+      if (!reading || error instanceof RequestTimeoutError || attempt >= RETRY_DELAYS_MS.length) throw error;
+      await sleep(jitter(RETRY_DELAYS_MS[attempt]));
       continue;
     }
-    if (!RETRYABLE_STATUS.has(result.response.status) || attempt >= retries.length) break;
-    await sleep(Math.max(retries[attempt], retryAfterMs(result.response.headers.get("retry-after")) ?? 0));
+    if (!reading) break;
+    const status = result.response.status;
+    if (!RETRYABLE_STATUS.has(status)) break;
+    const schedule = status === 429 ? RATE_LIMIT_DELAYS_MS : RETRY_DELAYS_MS;
+    if (attempt >= schedule.length) break;
+    const hinted = retryAfterMs(result.response.headers.get("retry-after"), status === 429 ? RATE_LIMIT_AFTER_CAP_MS : RETRY_AFTER_CAP_MS) ?? 0;
+    await sleep(Math.max(jitter(schedule[attempt]), hinted));
   }
   const { response, raw } = result;
   const payload: unknown = raw.length > 0 ? safeJsonParse(raw) : undefined;
