@@ -55,6 +55,8 @@ import {
   withinRange,
 } from "./movement-presentation";
 import { TransferFormScreen } from "./TransferFormScreen";
+import { GettingStarted } from "./GettingStarted";
+import { isOnboardingComplete, type OnboardingTarget, onboardingState } from "./getting-started-logic";
 import { useForegroundRefresh } from "./use-foreground-refresh";
 
 type LoadState = "loading" | "ready" | "error";
@@ -119,9 +121,12 @@ function sourceKey(filters: MovementFilters, today: string): string {
 
 export function MovementsScreen({
   onNavigate,
+  onCreateIn,
   initialFilters,
 }: {
   onNavigate: (section: Section) => void;
+  /** Abre Contas ou Categorias já no formulário de criação (Primeiros passos). */
+  onCreateIn: (section: "contas" | "categorias") => void;
   /** Filtros de partida (vindos de Categorias); sem eles vale o padrão. */
   initialFilters?: Partial<MovementFilters>;
 }) {
@@ -309,6 +314,14 @@ export function MovementsScreen({
 
   const historyTotal = view?.historyTotal ?? 0;
   const canRegister = state === "ready" && accountItems !== null && accountItems.length > 0;
+  // Primeiros passos: só com contas, categorias e histórico conhecidos, e enquanto falta algum passo.
+  const onboarding = state === "ready" && view ? onboardingState({ accounts: accountItems, categories: categoryItems, historyTotal: view.historyTotal }) : null;
+  const showOnboarding = onboarding !== null && !isOnboardingComplete(onboarding);
+  const runOnboardingAction = (target: OnboardingTarget) => {
+    if (target === "criar-conta") onCreateIn("contas");
+    else if (target === "criar-categoria") onCreateIn("categorias");
+    else if (canRegister) setMode("movement");
+  };
   const periodChip: PeriodChip = filters.period === null ? "tudo" : filters.period;
   const periodEmpty = Boolean(view?.period && view.rows.length === 0);
   const rows = view ? (source?.kind === "paged" ? view.rows : view.rows.slice(0, visible)) : [];
@@ -342,6 +355,10 @@ export function MovementsScreen({
         />
       ) : null}
       {accounts.truncated ? <Notice tone="info" text="Você tem muitas contas; apenas as primeiras aparecem na escolha de conta." /> : null}
+
+      {showOnboarding && onboarding ? (
+        <GettingStarted state={onboarding} onAction={runOnboardingAction} onGoToRules={() => onNavigate("regras")} canRegister={canRegister} />
+      ) : null}
 
       {historyTotal > 0 ? (
         <>
@@ -481,7 +498,8 @@ export function MovementsScreen({
           }
           ListHeaderComponent={header}
           ListEmptyComponent={
-            accountItems !== null && accountItems.length === 0 ? (
+            // Os Primeiros passos já dizem isto: sem repetir o aviso de "sem contas" e "sem movimentações".
+            showOnboarding && (accountItems?.length === 0 || historyTotal === 0) ? null : accountItems !== null && accountItems.length === 0 ? (
               <EmptyState
                 icon={(color) => <IconAccounts size={24} color={color} />}
                 title="Comece criando uma conta"

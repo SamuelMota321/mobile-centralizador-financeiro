@@ -41,6 +41,10 @@ import {
 import { CONNECTION_STATUSES, CONSENT_STATUSES } from "../connections/types";
 import { itemSchemas, stateSchemas } from "../patrimony/schema";
 import { LIMITS as PATRIMONY_LIMITS, PATRIMONY_COLLECTIONS } from "../patrimony/types";
+import { allocationSchema, movementPageSchema, movementSchema, positionPageSchema, positionSchema } from "../investments/schema";
+import { ASSET_CLASSES, AVAILABILITIES, EXCLUSION_REASONS, FRESHNESS } from "../investments/types";
+import { syncReasonSchema, syncRunSchema } from "../sync-runs/schema";
+import { SYNC_REASON_CODES, SYNC_REASON_DATA_TYPES, SYNC_RUN_STATUSES, SYNC_TRIGGERS } from "../sync-runs/types";
 
 // Verifica o cliente contra o snapshot versionado do OpenAPI do backend: ao atualizar o
 // snapshot, qualquer mudanca incompativel nas operacoes consumidas quebra este teste.
@@ -634,5 +638,68 @@ describe("contrato OpenAPI de bens, financiamentos e passivos (HU-012)", () => {
   it("criar não pede Idempotency-Key", () => {
     const headers = (operation(LIST, "post").parameters ?? []).filter((p) => p.in === "header");
     expect(headers).toEqual([]);
+  });
+});
+
+describe("contrato OpenAPI de sincronização (pedido de execução)", () => {
+  const RUNS = "/api/v1/connections/{connectionId}/sync-runs";
+
+  it("POST existe e exige bearer Auth0; não pede Idempotency-Key", () => {
+    const op = operation(RUNS, "post");
+    expect(op.security).toEqual([{ auth0: [] }]);
+    expect((op.parameters ?? []).filter((p) => p.in === "header")).toEqual([]);
+  });
+
+  it("a execução aceita (202) tem exatamente os campos do syncRunSchema e os enums do cliente", () => {
+    const run = jsonSchema(operation(RUNS, "post"), "202") as JsonSchema & { properties: Record<string, JsonSchema & { enum?: string[] }> };
+    expect(Object.keys(run.properties ?? {}).sort()).toEqual(Object.keys(syncRunSchema.shape).sort());
+    expect([...(run.required ?? [])].sort()).toEqual(Object.keys(syncRunSchema.shape).sort());
+    expect(run.properties.status.enum).toEqual([...SYNC_RUN_STATUSES]);
+    expect(run.properties.trigger.enum).toEqual([...SYNC_TRIGGERS]);
+    const reason = run.properties.reasons.items as JsonSchema & { properties: Record<string, { enum: string[] }> };
+    expect(reason.properties.dataType.enum).toEqual([...SYNC_REASON_DATA_TYPES]);
+    expect(reason.properties.code.enum).toEqual([...SYNC_REASON_CODES]);
+  });
+});
+
+describe("contrato OpenAPI de investimentos e alocação (HU-009, HU-011)", () => {
+  const LIST = "/api/v1/investments";
+  const MOVEMENTS = "/api/v1/investments/{id}/movements";
+  type Enumerated = JsonSchema & { enum?: string[]; properties?: Record<string, Enumerated>; items?: Enumerated };
+
+  it.each([
+    [LIST, "get"],
+    [MOVEMENTS, "get"],
+  ])("%s %s existe e exige bearer Auth0", (path, method) => {
+    expect(operation(path, method).security).toEqual([{ auth0: [] }]);
+  });
+
+  it("a página tem os campos do positionPageSchema e a posição os do positionSchema", () => {
+    const page = jsonSchema(operation(LIST, "get"), "200") as Enumerated;
+    expect(Object.keys(page.properties ?? {}).sort()).toEqual(Object.keys(positionPageSchema.shape).sort());
+    const position = page.properties?.positions.items as Enumerated;
+    expect(Object.keys(position.properties ?? {}).sort()).toEqual(Object.keys(positionSchema.shape).sort());
+    expect([...(position.required ?? [])].sort()).toEqual(Object.keys(positionSchema.shape).sort());
+    const quality = position.properties?.dataQuality as Enumerated;
+    expect(quality.properties?.availability.enum).toEqual([...AVAILABILITIES]);
+    expect(quality.properties?.freshness.enum).toEqual([...FRESHNESS]);
+  });
+
+  it("a alocação tem os campos, as classes e os motivos de exclusão do cliente", () => {
+    const page = jsonSchema(operation(LIST, "get"), "200") as Enumerated;
+    const allocation = (page.properties?.portfolio as Enumerated).properties?.allocation as Enumerated;
+    expect(Object.keys(allocation.properties ?? {}).sort()).toEqual(Object.keys(allocationSchema.shape).sort());
+    const reasons = allocation.properties?.excludedByReason as Enumerated;
+    expect(Object.keys(reasons.properties ?? {}).sort()).toEqual([...EXCLUSION_REASONS].sort());
+    const currency = allocation.properties?.currencies.items as Enumerated;
+    const byClass = currency.properties?.byClass.items as Enumerated;
+    expect(byClass.properties?.assetClass.enum).toEqual([...ASSET_CLASSES]);
+  });
+
+  it("os movimentos têm os campos do movementSchema e do movementPageSchema", () => {
+    const page = jsonSchema(operation(MOVEMENTS, "get"), "200") as Enumerated;
+    expect(Object.keys(page.properties ?? {}).sort()).toEqual(Object.keys(movementPageSchema.shape).sort());
+    const movement = page.properties?.movements.items as Enumerated;
+    expect(Object.keys(movement.properties ?? {}).sort()).toEqual(Object.keys(movementSchema.shape).sort());
   });
 });

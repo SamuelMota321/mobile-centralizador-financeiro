@@ -24,7 +24,7 @@ import {
   IconSignOut,
 } from "./icons";
 
-export type Section = "visao-geral" | "movimentacoes" | "contas" | "categorias" | "regras" | "patrimonio";
+export type Section = "visao-geral" | "movimentacoes" | "contas" | "categorias" | "regras" | "patrimonio" | "investimentos";
 
 const SHOW_OVERVIEW = overviewPreviewEnabled();
 const TABS = [
@@ -93,8 +93,8 @@ export function AppScreen({
         accessibilityRole="tablist"
       >
         {TABS.map(({ section: target, label, Icon }) => {
-          // Bens e dívidas não tem aba própria: abre a partir de Contas, que continua marcada.
-          const selected = target === (section === "patrimonio" ? "contas" : section);
+          // Bens e dívidas e Investimentos não têm aba própria: abrem a partir de Contas, que continua marcada.
+          const selected = target === (section === "patrimonio" || section === "investimentos" ? "contas" : section);
           const color = selected ? colors.primary : colors.muted;
           return (
             <Pressable

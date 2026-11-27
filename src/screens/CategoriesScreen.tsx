@@ -63,8 +63,11 @@ const SORT_OPTIONS = (Object.entries(SORTS) as [CategorySort, string][]).map(([v
 export function CategoriesScreen({
   onNavigate,
   onOpenMovements,
+  startCreating = false,
 }: {
   onNavigate: (section: Section) => void;
+  /** Abre já no formulário de nova categoria (vindo dos Primeiros passos). */
+  startCreating?: boolean;
   /** Abre Movimentações já filtrada ("Ver lançamentos", "Revisar"). */
   onOpenMovements: (filters: Partial<MovementFilters>) => void;
 }) {
@@ -78,7 +81,7 @@ export function CategoriesScreen({
   const [scanLoading, setScanLoading] = useState(false);
   const [state, setState] = useState<LoadState>("loading");
   const [refreshing, setRefreshing] = useState(false);
-  const [mode, setMode] = useState<Mode>({ kind: "list" });
+  const [mode, setMode] = useState<Mode>(startCreating ? { kind: "create" } : { kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [suggesting, setSuggesting] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);

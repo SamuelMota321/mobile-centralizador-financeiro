@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 import { AccountsScreen } from "./src/screens/AccountsScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
+import { InvestmentsScreen } from "./src/screens/InvestmentsScreen";
 import { MovementsScreen } from "./src/screens/MovementsScreen";
 import { OverviewScreen } from "./src/screens/OverviewScreen";
 import { PatrimonyScreen } from "./src/screens/PatrimonyScreen";
@@ -57,8 +58,16 @@ function Root() {
   const [section, setSection] = useState<Section>("movimentacoes");
   // Filtros com que Movimentações abre quando chega de Categorias ("Ver lançamentos", "Revisar").
   const [movementsPreset, setMovementsPreset] = useState<Partial<MovementFilters> | null>(null);
+  // "Criar conta" e "Criar categoria" dos Primeiros passos abrem a tela já no formulário de criação.
+  const [startCreating, setStartCreating] = useState(false);
   const navigate = useCallback((next: Section) => {
     setMovementsPreset(null);
+    setStartCreating(false);
+    setSection(next);
+  }, []);
+  const createIn = useCallback((next: "contas" | "categorias") => {
+    setMovementsPreset(null);
+    setStartCreating(true);
     setSection(next);
   }, []);
   const openMovements = useCallback((preset: Partial<MovementFilters>) => {
@@ -75,14 +84,16 @@ function Root() {
     case "visao-geral":
       return <OverviewScreen onNavigate={navigate} />;
     case "movimentacoes":
-      return <MovementsScreen key={movementsPreset ? "preset" : "default"} onNavigate={navigate} initialFilters={movementsPreset ?? undefined} />;
+      return <MovementsScreen key={movementsPreset ? "preset" : "default"} onNavigate={navigate} onCreateIn={createIn} initialFilters={movementsPreset ?? undefined} />;
     case "contas":
-      return <AccountsScreen onNavigate={navigate} />;
+      return <AccountsScreen onNavigate={navigate} startCreating={startCreating} />;
     case "categorias":
-      return <CategoriesScreen onNavigate={navigate} onOpenMovements={openMovements} />;
+      return <CategoriesScreen onNavigate={navigate} onOpenMovements={openMovements} startCreating={startCreating} />;
     case "regras":
       return <RulesScreen onNavigate={navigate} />;
     case "patrimonio":
       return <PatrimonyScreen onNavigate={navigate} />;
+    case "investimentos":
+      return <InvestmentsScreen onNavigate={navigate} />;
   }
 }

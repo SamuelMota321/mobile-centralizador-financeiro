@@ -15,7 +15,7 @@ import { formatMoney } from "../lib/money";
 import { makeStyles, radius, type, useTheme } from "../theme";
 import { Banner } from "../ui/blocks";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
-import { IconAccounts, IconArrowRight, IconHome, IconPlus, IconTransfer } from "../ui/icons";
+import { IconAccounts, IconArrowRight, IconHome, IconPlus, IconTransfer, IconTrendUp } from "../ui/icons";
 import { FilterChips, GroupHeader, SearchField } from "../ui/list-tools";
 import { Monogram } from "../ui/monogram";
 import { StatCard, StatGrid } from "../ui/stat-card";
@@ -50,7 +50,7 @@ interface NoticeState {
   text: string;
 }
 
-export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) => void }) {
+export function AccountsScreen({ onNavigate, startCreating = false }: { onNavigate: (section: Section) => void; /** Abre já no formulário de nova conta (vindo dos Primeiros passos). */ startCreating?: boolean }) {
   const { handleUnauthorized } = useAuth();
   const styles = useStyles();
   const list = useListStyles();
@@ -58,7 +58,7 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [refreshing, setRefreshing] = useState(false);
-  const [mode, setMode] = useState<Mode>({ kind: "list" });
+  const [mode, setMode] = useState<Mode>(startCreating ? { kind: "create" } : { kind: "list" });
   const [notice, setNotice] = useState<NoticeState | null>(null);
   // Conta com desativação em andamento: bloqueia toque duplo e outras ações nela.
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -385,7 +385,13 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
                   text="O valor de cada conta é o saldo inicial que você informou. Saldos atuais e totais chegam com o painel consolidado."
                 />
               ) : null}
-              {/* Bens e dívidas não tem aba própria: abre a partir daqui. */}
+              {/* Bens e dívidas e Investimentos não têm aba própria: abrem a partir daqui. */}
+              <Banner
+                icon={(color) => <IconTrendUp size={22} color={color} />}
+                title="Investimentos"
+                text="Posições lidas das suas conexões autorizadas, com a origem e a data de cada dado."
+                action={<Button variant="secondary" label="Abrir investimentos" onPress={() => onNavigate("investimentos")} icon={(color) => <IconArrowRight size={18} color={color} />} />}
+              />
               <Banner
                 icon={(color) => <IconHome size={22} color={color} />}
                 title="Bens e dívidas"
