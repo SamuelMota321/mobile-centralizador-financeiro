@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
 import { makeStyles, type } from "../theme";
+import { Backdrop } from "../ui/backdrop";
 import { BrandLockup } from "../ui/brand";
 import { Button, Notice } from "../ui/controls";
 
@@ -12,6 +13,7 @@ export function SignInScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
+      <Backdrop height={300} />
       <BrandLockup />
 
       <View style={styles.intro}>

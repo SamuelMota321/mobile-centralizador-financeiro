@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthContext";
 import { overviewPreviewEnabled } from "../lib/overview/flag";
 import { makeStyles, radius, type, useTheme } from "../theme";
+import { Backdrop } from "./backdrop";
 import { BrandLockup } from "./brand";
 import {
   IconAccounts,
@@ -61,6 +62,7 @@ export function AppScreen({
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <Backdrop />
       <View style={styles.header}>
         <BrandLockup />
         <Pressable

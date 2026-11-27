@@ -33,6 +33,10 @@ export interface ThemeColors {
   categoryOther: string;
   /** Ícone sobre o círculo cheio da categoria. */
   onCategory: string;
+  /** Verde do fundo decorativo (Style Guide 2.3); null no claro, onde o contraste do texto secundário não tem folga. */
+  decoColor: string | null;
+  /** Intensidade máxima das ondas (0 a 1). */
+  decoAlpha: number;
 }
 
 const light: ThemeColors = {
@@ -55,6 +59,8 @@ const light: ThemeColors = {
   categories: ["#3B72C4", "#D0683A", "#1F9A8A", "#D39A1A", "#C95B8A", "#6C5BD0", "#A8742A", "#4555A8", "#D1495B", "#9A4AA6", "#6E7D16", "#C0398F"],
   categoryOther: "#808A87",
   onCategory: "#FFFFFF",
+  decoColor: null,
+  decoAlpha: 0,
 };
 
 // O tema escuro preserva temperatura e hierarquia do claro; nunca preto puro.
@@ -78,6 +84,8 @@ const dark: ThemeColors = {
   categories: ["#4A80D6", "#D0683A", "#219A89", "#B88518", "#CC5F8E", "#8576E0", "#A8742A", "#6C7AC3", "#D35162", "#AD60B8", "#768618", "#CA4D9D"],
   categoryOther: "#6B7673",
   onCategory: "#FFFFFF",
+  decoColor: "#55D6A4",
+  decoAlpha: 0.22,
 };
 
 /** Um arquivo de fonte por peso: no Android, fontWeight nao combina com fonte customizada. */
