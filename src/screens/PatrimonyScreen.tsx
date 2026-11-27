@@ -5,6 +5,7 @@ import { isUnauthorized } from "../lib/accounts/messages";
 import { listAllPages } from "../lib/api/pagination";
 import { todayCivilDate } from "../lib/civil-date";
 import { listPatrimony } from "../lib/patrimony/api";
+import { patrimonyPreviewEnabled, patrimonyPreviewPage } from "../lib/patrimony/preview";
 import { PATRIMONY_COLLECTIONS, type PatrimonyCollection, type PatrimonyItem } from "../lib/patrimony/types";
 import { makeStyles, type, useTheme } from "../theme";
 import { AssetBadge } from "../ui/asset-badge";
@@ -49,11 +50,12 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const today = todayCivilDate();
+  const preview = patrimonyPreviewEnabled();
 
   const loadSection = useCallback(
     async (collection: PatrimonyCollection, page: number) => {
       try {
-        const result = await listPatrimony(collection, { page, pageSize: PATRIMONY_PAGE_SIZE });
+        const result = preview ? patrimonyPreviewPage(collection, new Date()) : await listPatrimony(collection, { page, pageSize: PATRIMONY_PAGE_SIZE });
         setSections((current) => ({ ...current, [collection]: { status: "ready", items: result.items as PatrimonyItem[], total: result.total } }));
       } catch (error) {
         if (isUnauthorized(error)) {
@@ -63,12 +65,12 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
         setSections((current) => ({ ...current, [collection]: { status: "error" } }));
       }
     },
-    [handleUnauthorized],
+    [handleUnauthorized, preview],
   );
 
   const loadAssets = useCallback(async () => {
     try {
-      const all = await listAllPages((query) => listPatrimony("assets", query));
+      const all = preview ? patrimonyPreviewPage("assets", new Date()) : await listAllPages((query) => listPatrimony("assets", query));
       setAssets(all.items.map(({ id, description, type: assetType }) => ({ id, description, type: assetType })));
     } catch (error) {
       if (isUnauthorized(error)) {
@@ -77,7 +79,7 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
       }
       setAssets(null);
     }
-  }, [handleUnauthorized]);
+  }, [handleUnauthorized, preview]);
 
   const loadAll = useCallback(
     async (current: Record<PatrimonyCollection, number>) => {
@@ -145,10 +147,11 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
       <View key={`${item.id}:${item.version}`} style={styles.rowWrap}>
         <Pressable
           onPress={() => setExpanded(open ? null : item.id)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: open }}
+          disabled={preview}
+          accessibilityRole={preview ? undefined : "button"}
+          accessibilityState={preview ? undefined : { expanded: open }}
           accessibilityLabel={[item.description, item.kind === "asset" ? `valor estimado ${value}` : `saldo devedor ${value}`, ...meta].join(", ")}
-          accessibilityHint={open ? "Fechar as ações" : "Abrir as ações do item"}
+          accessibilityHint={preview ? undefined : open ? "Fechar as ações" : "Abrir as ações do item"}
           style={({ pressed }) => [styles.row, open && styles.rowOpen, pressed && styles.pressed]}
         >
           {item.kind === "asset" ? <AssetBadge type={item.type} /> : item.kind === "financing" && item.assetId ? <AssetBadge type={assetType(item.assetId)} /> : null}
@@ -183,6 +186,7 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.primary} colors={[colors.primary]} />}
       >
+        {preview ? <Notice tone="info" text="Prévia com dados de exemplo (EXPO_PUBLIC_PATRIMONY_PREVIEW). Nada aqui foi informado por você." /> : null}
         {notice ? <Notice tone={notice.tone} text={notice.text} action={{ label: "Fechar", onPress: () => setNotice(null) }} /> : null}
 
         {PATRIMONY_COLLECTIONS.map((collection) => {
@@ -193,14 +197,16 @@ export function PatrimonyScreen({ onNavigate }: { onNavigate: (section: Section)
           const pageCount = total === undefined ? 1 : Math.max(1, Math.ceil(total / PATRIMONY_PAGE_SIZE));
           return (
             <SectionCard key={collection} icon={(color) => <Icon size={22} color={color} />} title={section.title} count={total}>
-              <View style={styles.create}>
-                <Button
-                  variant="secondary"
-                  label={section.create}
-                  onPress={() => setMode({ kind: "form", collection })}
-                  icon={(color) => <IconPlus size={18} color={color} />}
-                />
-              </View>
+              {preview ? null : (
+                <View style={styles.create}>
+                  <Button
+                    variant="secondary"
+                    label={section.create}
+                    onPress={() => setMode({ kind: "form", collection })}
+                    icon={(color) => <IconPlus size={18} color={color} />}
+                  />
+                </View>
+              )}
               {state.status === "loading" ? (
                 <View style={styles.pad}>
                   <SkeletonList rows={2} />
