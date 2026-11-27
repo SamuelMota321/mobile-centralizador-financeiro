@@ -19,6 +19,7 @@ import { PatrimonyScreen } from "./src/screens/PatrimonyScreen";
 import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
 import type { MovementFilters } from "./src/screens/movement-presentation";
+import { overviewPreviewEnabled } from "./src/lib/overview/flag";
 import { useTheme } from "./src/theme";
 import type { Section } from "./src/ui/screens";
 
@@ -55,7 +56,7 @@ function Splash() {
 
 function Root() {
   const { status } = useAuth();
-  const [section, setSection] = useState<Section>("movimentacoes");
+  const [section, setSection] = useState<Section>(overviewPreviewEnabled() ? "visao-geral" : "movimentacoes");
   // Filtros com que Movimentações abre quando chega de Categorias ("Ver lançamentos", "Revisar").
   const [movementsPreset, setMovementsPreset] = useState<Partial<MovementFilters> | null>(null);
   // "Criar conta" e "Criar categoria" dos Primeiros passos abrem a tela já no formulário de criação.
