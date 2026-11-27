@@ -14,6 +14,7 @@ import { AccountsScreen } from "./src/screens/AccountsScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { MovementsScreen } from "./src/screens/MovementsScreen";
 import { OverviewScreen } from "./src/screens/OverviewScreen";
+import { PatrimonyScreen } from "./src/screens/PatrimonyScreen";
 import { RulesScreen } from "./src/screens/RulesScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
 import type { MovementFilters } from "./src/screens/movement-presentation";
@@ -81,5 +82,7 @@ function Root() {
       return <CategoriesScreen onNavigate={navigate} onOpenMovements={openMovements} />;
     case "regras":
       return <RulesScreen onNavigate={navigate} />;
+    case "patrimonio":
+      return <PatrimonyScreen onNavigate={navigate} />;
   }
 }

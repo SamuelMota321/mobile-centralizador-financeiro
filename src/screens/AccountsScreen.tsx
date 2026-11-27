@@ -13,8 +13,9 @@ import { listAllPages, SELECTOR_ITEM_LIMIT } from "../lib/api/pagination";
 import { formatCivilDate } from "../lib/civil-date";
 import { formatMoney } from "../lib/money";
 import { makeStyles, radius, type, useTheme } from "../theme";
+import { Banner } from "../ui/blocks";
 import { Button, EmptyState, Notice, type NoticeTone, SkeletonList, StatusChip } from "../ui/controls";
-import { IconAccounts, IconPlus, IconTransfer } from "../ui/icons";
+import { IconAccounts, IconArrowRight, IconHome, IconPlus, IconTransfer } from "../ui/icons";
 import { FilterChips, GroupHeader, SearchField } from "../ui/list-tools";
 import { Monogram } from "../ui/monogram";
 import { StatCard, StatGrid } from "../ui/stat-card";
@@ -377,14 +378,21 @@ export function AccountsScreen({ onNavigate }: { onNavigate: (section: Section) 
             );
           }}
           ListFooterComponent={
-            accounts.length > 0 ? (
-              <View style={styles.footnote}>
+            <View style={styles.footnote}>
+              {accounts.length > 0 ? (
                 <Notice
                   tone="info"
                   text="O valor de cada conta é o saldo inicial que você informou. Saldos atuais e totais chegam com o painel consolidado."
                 />
-              </View>
-            ) : null
+              ) : null}
+              {/* Bens e dívidas não tem aba própria: abre a partir daqui. */}
+              <Banner
+                icon={(color) => <IconHome size={22} color={color} />}
+                title="Bens e dívidas"
+                text="Registre imóveis, veículos, financiamentos e outras dívidas, com os valores que você informa."
+                action={<Button variant="secondary" label="Abrir bens e dívidas" onPress={() => onNavigate("patrimonio")} icon={(color) => <IconArrowRight size={18} color={color} />} />}
+              />
+            </View>
           }
         />
       )}
@@ -412,5 +420,5 @@ const useStyles = makeStyles((c) => ({
   balanceBox: { alignItems: "flex-end" },
   balance: { ...type.amount, color: c.foreground },
   actions: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 16 },
-  footnote: { paddingTop: 16 },
+  footnote: { paddingTop: 16, gap: 12 },
 }));

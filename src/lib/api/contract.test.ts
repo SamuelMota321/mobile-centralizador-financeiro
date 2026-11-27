@@ -39,6 +39,8 @@ import {
   pluggySessionSchema,
 } from "../connections/schema";
 import { CONNECTION_STATUSES, CONSENT_STATUSES } from "../connections/types";
+import { itemSchemas, stateSchemas } from "../patrimony/schema";
+import { LIMITS as PATRIMONY_LIMITS, PATRIMONY_COLLECTIONS } from "../patrimony/types";
 
 // Verifica o cliente contra o snapshot versionado do OpenAPI do backend: ao atualizar o
 // snapshot, qualquer mudanca incompativel nas operacoes consumidas quebra este teste.
@@ -576,5 +578,61 @@ describe("contrato OpenAPI de Connections", () => {
       expect(connectionDetailSchema.parse(connectionView({ initialImport })).initialImport).toEqual(initialImport);
     }
     expect(connectionDetailSchema.safeParse(connectionView()).success).toBe(false);
+  });
+});
+
+describe("contrato OpenAPI de bens, financiamentos e passivos (HU-012)", () => {
+  const LIST = "/api/v1/patrimony/{collection}";
+  const ITEM = "/api/v1/patrimony/{collection}/{id}";
+  type Node = JsonSchema & {
+    oneOf?: Node[];
+    anyOf?: Node[];
+    enum?: string[];
+    maxLength?: number;
+    properties?: Record<string, Node>;
+    items?: Node;
+  };
+  const KINDS = { assets: "asset", financings: "financing", liabilities: "liability" } as const;
+
+  it.each([
+    [LIST, "get"],
+    [LIST, "post"],
+    [ITEM, "get"],
+    [ITEM, "patch"],
+    [`${ITEM}/history`, "get"],
+  ])("%s %s existe e exige bearer Auth0", (path, method) => {
+    expect(operation(path, method).security).toEqual([{ auth0: [] }]);
+  });
+
+  it("as coleções são as do cliente e não há DELETE", () => {
+    const param = operation(LIST, "get").parameters?.find((p) => p.name === "collection") as { schema?: { enum?: string[] } };
+    expect(param.schema?.enum).toEqual([...PATRIMONY_COLLECTIONS]);
+    expect(snapshot.paths[ITEM]?.delete).toBeUndefined();
+  });
+
+  it("cada tipo de item tem exatamente os campos do esquema do cliente", () => {
+    const variants = (jsonSchema(operation(ITEM, "get"), "200") as Node).oneOf ?? [];
+    for (const collection of PATRIMONY_COLLECTIONS) {
+      const variant = variants.find((v) => v.properties?.kind?.enum?.[0] === KINDS[collection]);
+      expect(variant, collection).toBeDefined();
+      expect(Object.keys(variant?.properties ?? {}).sort()).toEqual(Object.keys(itemSchemas[collection].shape).sort());
+    }
+  });
+
+  it("o corpo de criação aceita só os campos editáveis, com os limites do cliente", () => {
+    const op = operation(LIST, "post");
+    const body = op.requestBody?.content["application/json"].schema as Node;
+    const editable = PATRIMONY_COLLECTIONS.map((c) => Object.keys(stateSchemas[c].shape).sort());
+    const published = (body.anyOf ?? []).map((v) => Object.keys(v.properties ?? {}).sort());
+    expect(published).toEqual(editable);
+    const asset = body.anyOf?.[0].properties ?? {};
+    expect(asset.type.maxLength).toBe(PATRIMONY_LIMITS.type);
+    expect(asset.description.maxLength).toBe(PATRIMONY_LIMITS.description);
+    expect(asset.source.maxLength).toBe(PATRIMONY_LIMITS.source);
+  });
+
+  it("criar não pede Idempotency-Key", () => {
+    const headers = (operation(LIST, "post").parameters ?? []).filter((p) => p.in === "header");
+    expect(headers).toEqual([]);
   });
 });
