@@ -62,6 +62,49 @@ export function retryAfterMs(header: string | null): number | null {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Tempo limite de cada leitura (inclui ler o corpo). Cobre uma instância que acorda devagar demais ou
+ * uma conexão aberta e muda: estourou, a tela cai no erro com "Tentar de novo" em vez de esperar para
+ * sempre. Não repete (a nova tentativa é do usuário, quando a instância já acordou). Escritas não têm
+ * tempo limite aqui: abortar um POST que o servidor já aceitou pode duplicar o registro.
+ */
+export const REQUEST_TIMEOUT_MS = 45_000;
+
+export class RequestTimeoutError extends Error {
+  constructor() {
+    super("A requisição ao servidor passou do tempo limite.");
+    this.name = "RequestTimeoutError";
+  }
+}
+
+async function fetchRead(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
+  const controller = new AbortController();
+  const caller = init.signal;
+  const onCallerAbort = () => controller.abort();
+  if (caller?.aborted) controller.abort();
+  else caller?.addEventListener("abort", onCallerAbort, { once: true });
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    return { response, raw: await response.text() };
+  } catch (error) {
+    if (timedOut) throw new RequestTimeoutError();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    caller?.removeEventListener("abort", onCallerAbort);
+  }
+}
+
+async function fetchWrite(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
+  const response = await fetch(url, init);
+  return { response, raw: await response.text() };
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -90,22 +133,23 @@ export async function apiRequest<T>(
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   };
 
-  const retries = isRead(rest.method) ? RETRY_DELAYS_MS : [];
-  let response: Response | undefined;
+  const reading = isRead(rest.method);
+  const retries = reading ? RETRY_DELAYS_MS : [];
+  const send = reading ? fetchRead : fetchWrite;
+  let result: { response: Response; raw: string };
   for (let attempt = 0; ; attempt += 1) {
     try {
-      response = await fetch(url, init);
+      result = await send(url, init);
     } catch (error) {
-      // Falha de rede: instância acordando ou conexão caiu. Sem tentativas sobrando, propaga.
-      if (attempt >= retries.length) throw error;
+      // Falha de rede: instância acordando ou conexão caiu. Tempo limite e esgotadas as tentativas propagam.
+      if (error instanceof RequestTimeoutError || attempt >= retries.length) throw error;
       await sleep(retries[attempt]);
       continue;
     }
-    if (!RETRYABLE_STATUS.has(response.status) || attempt >= retries.length) break;
-    await sleep(Math.max(retries[attempt], retryAfterMs(response.headers.get("retry-after")) ?? 0));
+    if (!RETRYABLE_STATUS.has(result.response.status) || attempt >= retries.length) break;
+    await sleep(Math.max(retries[attempt], retryAfterMs(result.response.headers.get("retry-after")) ?? 0));
   }
-
-  const raw = await response.text();
+  const { response, raw } = result;
   const payload: unknown = raw.length > 0 ? safeJsonParse(raw) : undefined;
 
   if (!response.ok) {

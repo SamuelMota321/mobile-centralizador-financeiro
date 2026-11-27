@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, retryAfterMs, setTokenProvider } from "./http-client";
+import { apiRequest, REQUEST_TIMEOUT_MS, RequestTimeoutError, retryAfterMs, setTokenProvider } from "./http-client";
 
 function stubFetch(status: number, body?: unknown) {
   const fetchMock = vi.fn(async () =>
@@ -105,5 +105,50 @@ describe("nova tentativa em leituras", () => {
     expect(retryAfterMs("999")).toBe(8000);
     expect(retryAfterMs("Wed, 21 Oct 2026 07:28:00 GMT")).toBeNull();
     expect(retryAfterMs(null)).toBeNull();
+  });
+});
+
+describe("tempo limite das leituras", () => {
+  afterEach(() => vi.useRealTimers());
+
+  /** fetch que nunca responde e só termina quando o sinal aborta, como uma conexão aberta e muda. */
+  function hanging() {
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("leitura que não responde vira RequestTimeoutError no tempo limite e não repete", async () => {
+    vi.useFakeTimers();
+    setTokenProvider(() => undefined);
+    const fetchMock = hanging();
+    const assertion = expect(apiRequest("/accounts")).rejects.toBeInstanceOf(RequestTimeoutError);
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("resposta dentro do prazo não é afetada (o relógio é limpo)", async () => {
+    vi.useFakeTimers();
+    setTokenProvider(() => undefined);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"ok":true}', { status: 200 })));
+    await expect(apiRequest("/accounts")).resolves.toEqual({ ok: true });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("escrita não ganha tempo limite (abortar um POST aceito pelo servidor poderia duplicar)", async () => {
+    setTokenProvider(() => undefined);
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(init?.signal).toBeUndefined();
+      return new Response("{}", { status: 201 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await apiRequest("/transactions", { method: "POST", body: { a: 1 } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
