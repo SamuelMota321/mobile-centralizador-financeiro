@@ -21,7 +21,7 @@ import {
   type AccountType,
   type DuplicateCandidate,
 } from "../lib/accounts/types";
-import { formatCivilDate, parseBrazilianDate } from "../lib/civil-date";
+import { formatCivilDate, maskBrazilianDate, parseBrazilianDate } from "../lib/civil-date";
 import { makeStyles } from "../theme";
 import { Button, Notice } from "../ui/controls";
 import { ChoiceGroup, Field, TextField } from "../ui/fields";
@@ -62,12 +62,13 @@ export function AccountFormScreen({ account, onCancel, onDone }: Props) {
     setInfo(null);
     setFieldErrors({});
 
+    const initialBalanceAsOf = parseBrazilianDate(balanceDate);
     const parsed = manualAccountInputSchema.safeParse({
       name,
       type: accountType,
       institutionName,
       initialBalance,
-      initialBalanceAsOf: parseBrazilianDate(balanceDate) ?? balanceDate,
+      initialBalanceAsOf: initialBalanceAsOf ?? "",
       confirmPossibleDuplicate,
     });
 
@@ -76,6 +77,9 @@ export function AccountFormScreen({ account, onCancel, onDone }: Props) {
       for (const issue of parsed.error.issues) {
         const key = String(issue.path[0] ?? "");
         if (key && !errors[key]) errors[key] = issue.message;
+      }
+      if (initialBalanceAsOf === null) {
+        errors.initialBalanceAsOf = "Informe uma data válida no formato DD/MM/AAAA.";
       }
       setFieldErrors(errors);
       setSubmitting(false);
@@ -179,8 +183,8 @@ export function AccountFormScreen({ account, onCancel, onDone }: Props) {
       <TextField
         label="Data de referência do saldo"
         value={balanceDate}
-        onChangeText={setBalanceDate}
-        keyboardType="numbers-and-punctuation"
+        onChangeText={(value) => setBalanceDate(maskBrazilianDate(value))}
+        keyboardType="number-pad"
         placeholder="DD/MM/AAAA"
         maxLength={10}
         accessibilityLabel="Data de referência do saldo, no formato dia, mês e ano"

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCivilDate,
   isRealCivilDate,
+  maskBrazilianDate,
   parseBrazilianDate,
   todayCivilDate,
 } from "./civil-date";
@@ -30,6 +31,24 @@ describe("formatCivilDate", () => {
   it("converte para DD/MM/AAAA", () => {
     expect(formatCivilDate("2026-09-23")).toBe("23/09/2026");
     expect(formatCivilDate("invalida")).toBe("invalida");
+  });
+});
+
+describe("maskBrazilianDate", () => {
+  it.each([
+    ["27", "27"],
+    ["271", "27/1"],
+    ["27112", "27/11/2"],
+    ["27112026", "27/11/2026"],
+    ["27/11/2026", "27/11/2026"],
+    ["27-11-2026x9", "27/11/2026"],
+  ])("formata %j como %j", (raw, expected) => {
+    expect(maskBrazilianDate(raw)).toBe(expected);
+  });
+
+  it("converte a entrada com máscara para o formato da API e recusa datas inexistentes", () => {
+    expect(parseBrazilianDate(maskBrazilianDate("27112026"))).toBe("2026-11-27");
+    expect(parseBrazilianDate(maskBrazilianDate("31042026"))).toBeNull();
   });
 });
 
